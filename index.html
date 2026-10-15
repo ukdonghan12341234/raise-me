@@ -1289,15 +1289,15 @@ function bindGarden(){
 let qsub='quest';
 
 /* ---------- 테스트 모드 (개발자용) ----------
-   설정 맨 아래 버전 글자를 7번 누르면 켜짐. 지금 기록의 복사본으로만 움직이고 아무것도 저장하지 않음 */
+   설정 맨 아래 버전 글자를 쉬지 않고 15번 누르면 켜짐. 지금 기록의 복사본으로만 움직이고 아무것도 저장하지 않음 */
 let devMode=false,realState=null,verTaps=0,verTimer=null;
 const QUEST_ACT={meals:'meals',planday:'planday',reach:'reachout',study1:'study',study2:'study120',cardio:'cardio',walk:'walk',upper:'upperw',lower:'lowerw',deep:'deep60',read:'read',write:'write',meditate:'meditate',journal:'journal',hard:'hardtask',talk:'deeptalk',speak:'speakup',tidy:'tidyroom',chores:'chores',sleep:'sleeptime',plandone:'plandone'};
 function enterDev(){realState=state;state=JSON.parse(JSON.stringify(state));devMode=true;devOffset=0;viewDay=todayStr();render();window.scrollTo(0,0);showToast('테스트 모드를 켰어요. 실제 기록에는 저장되지 않아요.')}
 function exitDev(){state=realState;realState=null;devMode=false;devOffset=0;viewDay=todayStr();closeModal();render();window.scrollTo(0,0);showToast('테스트 모드를 끄고 실제 기록으로 돌아왔어요.')}
 function devTapVersion(){
   if(devMode){showToast('이미 테스트 모드예요.');return}
-  verTaps++;clearTimeout(verTimer);verTimer=setTimeout(()=>verTaps=0,2500);
-  if(verTaps>=7){verTaps=0;enterDev()}else if(verTaps>=3)showToast(`테스트 모드까지 ${7-verTaps}번`);
+  verTaps++;clearTimeout(verTimer);verTimer=setTimeout(()=>verTaps=0,1500);   // 1.5초 안에 이어서 15번 눌러야 켜짐. 남은 횟수는 알려주지 않음
+  if(verTaps>=15){verTaps=0;enterDev()}
 }
 function devFill(days){
   const pos=state.acts.filter(a=>!a.bad&&!a.adv),bad=state.acts.filter(a=>a.bad),r=Math.random;
@@ -1827,7 +1827,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{if(b.data
 
 /* ---------- 시작 ---------- */
 const RESET_ID='2026-10-14-reset1';   // 이 표시가 없는 예전 저장은 무시함 (초기화)
-const APP_VERSION='0.13 베타 (10월 15일)';
+const APP_VERSION='0.13.1 베타 (10월 15일)';
 const validShape=s=>!!(s&&s.base&&s.startDate&&Array.isArray(s.acts)&&s.logs);
 const valid=s=>validShape(s)&&s.resetId===RESET_ID;
 function adopt(s){const m=migrate(s);refreshActs(m);if(!m.quests)m.quests={d:{},w:{}};if(!m.cond)m.cond={};if(!m.studies)m.studies=[];if(!m.slogs)m.slogs={};if(!m.tests)m.tests=[];if(!m.crit)m.crit={};const changed=m!==s;state=m;return changed}
