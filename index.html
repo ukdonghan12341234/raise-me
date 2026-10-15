@@ -329,6 +329,21 @@ input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid
 .avatar{position:relative}
 .friend{position:absolute;width:24px;height:24px;top:4px;right:4px}
 
+
+/* 테스트 모드 */
+.devbar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:repeating-linear-gradient(-45deg,var(--surface) 0 10px,var(--sunk) 10px 20px);border:1.5px dashed var(--c-social);border-radius:12px;padding:8px 10px;font-size:13px}
+.devbar b{color:var(--c-social)}
+.verbtn{border:none;background:transparent;color:var(--muted);font-size:13px;padding:8px;align-self:center}
+.devbox{max-width:420px;max-height:calc(100vh - 48px);overflow:auto;text-align:left;align-items:stretch}
+.devbox h2,.devbox>p{text-align:center}
+.devsec{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
+.devsec>b{font-size:13px}
+.devsec>span{font-size:12px;color:var(--muted)}
+.devrow{display:flex;flex-wrap:wrap;gap:6px}
+.devrow .x{padding:8px 10px}
+.devrow select,.devrow input{flex:1 1 120px;width:auto;padding:7px 8px;font-size:13px}
+.devrow input{flex:0 0 70px}
+
 /* Onboarding */
 .prog{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
 .prog i{display:block;height:100%;background:var(--accent);transition:width .3s}
@@ -584,7 +599,8 @@ const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const addDays=(s,n)=>{const t=toDate(s);t.setDate(t.getDate()+n);return ymd(t)};
 const daysBetween=(a,b)=>Math.round((toDate(b)-toDate(a))/864e5);
-const todayStr=()=>ymd(new Date());
+let devOffset=0;   // 테스트 모드의 가상 날짜 (평소에는 0)
+const todayStr=()=>{const t=new Date();t.setDate(t.getDate()+devOffset);return ymd(t)};
 const WD='일월화수목금토';
 const fmtDay=s=>{const t=toDate(s);return `${t.getMonth()+1}월 ${t.getDate()}일 (${WD[t.getDay()]})`};
 
@@ -679,7 +695,8 @@ let state=null, db=null, ref=null, saveTimer=null, writing=false, pending=false;
 const LS='raise-me-v1';
 function lsGet(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
 function lsSet(v){try{localStorage.setItem(LS,JSON.stringify(v))}catch(e){}}
-function save(){state.savedAt=new Date().toISOString();state.resetId=RESET_ID;lsSet(state);clearTimeout(saveTimer);saveTimer=setTimeout(flush,600)}
+function save(){if(devMode)return;   // 테스트 모드에서는 아무것도 저장하지 않음
+  state.savedAt=new Date().toISOString();state.resetId=RESET_ID;lsSet(state);clearTimeout(saveTimer);saveTimer=setTimeout(flush,600)}
 async function flush(){
   if(!ref)return;
   if(writing){pending=true;return}
@@ -898,7 +915,7 @@ const ACH_XP=[20,50,100,200], TIER_N=['브론즈','실버','골드','전설'];
 function progress(st,R){
   const acts=Object.fromEntries(st.acts.map(a=>[a.id,a]));const bad=badIds(st);const today=todayStr();
   const S={dqStreak:0,logDays:0,streak:0,ups:0,gates:0,minCat:0,maxSub:0,study3:0,studyMin:0,studiesAdded:0,cardio:0,strength:0,med:0,social:0,tidy:0,sleep:0,cleanStreak:0,dqAllDays:0,dqDone:0,wqAll:0,tests:0};
-  let xp=0,wqDone=0;const ach={},dq={},wq={},frozen={};const Q=st.quests||{d:{},w:{}};
+  let xp=st.devXP||0,wqDone=0;const ach={},dq={},wq={},frozen={};const Q=st.quests||{d:{},w:{}};
   const fz=(st.buys||[]).filter(b=>b.id==='freeze').map(b=>b.date).sort();let fzi=0,fzHave=0;
   R.days.forEach(day=>{
     const d=day.d,log=st.logs[d]||[];
@@ -926,7 +943,7 @@ function progress(st,R){
     ACH.forEach(a=>{if(!ach[a.id]){const[v,n]=a.p(S);if(v>=n){ach[a.id]=d;xp+=ACH_XP[a.tier]}}});
   });
   const pl=plFromXP(xp);
-  const seedsEarned=SEED_DQ*S.dqDone+SEED_DQ_ALL*S.dqAllDays+SEED_WQ*wqDone+ACH.filter(a=>ach[a.id]).reduce((n,a)=>n+SEED_ACH[a.tier],0)+SEED_PL*(pl.lvl-1);
+  const seedsEarned=(st.devSeeds||0)+SEED_DQ*S.dqDone+SEED_DQ_ALL*S.dqAllDays+SEED_WQ*wqDone+ACH.filter(a=>ach[a.id]).reduce((n,a)=>n+SEED_ACH[a.tier],0)+SEED_PL*(pl.lvl-1);
   return {xp,pl,ach,dq,wq,S,frozen,fzHave,seedsEarned};
 }
 function titlesOf(P){return [...PL_TITLES.filter(t=>P.pl.lvl>=t[0]).map(t=>t[1]),...ACH.filter(a=>P.ach[a.id]&&a.title).map(a=>a.title)]}
@@ -1271,6 +1288,70 @@ function bindGarden(){
 }
 let qsub='quest';
 
+/* ---------- 테스트 모드 (개발자용) ----------
+   설정 맨 아래 버전 글자를 7번 누르면 켜짐. 지금 기록의 복사본으로만 움직이고 아무것도 저장하지 않음 */
+let devMode=false,realState=null,verTaps=0,verTimer=null;
+const QUEST_ACT={meals:'meals',planday:'planday',reach:'reachout',study1:'study',study2:'study120',cardio:'cardio',walk:'walk',upper:'upperw',lower:'lowerw',deep:'deep60',read:'read',write:'write',meditate:'meditate',journal:'journal',hard:'hardtask',talk:'deeptalk',speak:'speakup',tidy:'tidyroom',chores:'chores',sleep:'sleeptime',plandone:'plandone'};
+function enterDev(){realState=state;state=JSON.parse(JSON.stringify(state));devMode=true;devOffset=0;viewDay=todayStr();render();window.scrollTo(0,0);showToast('테스트 모드를 켰어요. 실제 기록에는 저장되지 않아요.')}
+function exitDev(){state=realState;realState=null;devMode=false;devOffset=0;viewDay=todayStr();closeModal();render();window.scrollTo(0,0);showToast('테스트 모드를 끄고 실제 기록으로 돌아왔어요.')}
+function devTapVersion(){
+  if(devMode){showToast('이미 테스트 모드예요.');return}
+  verTaps++;clearTimeout(verTimer);verTimer=setTimeout(()=>verTaps=0,2500);
+  if(verTaps>=7){verTaps=0;enterDev()}else if(verTaps>=3)showToast(`테스트 모드까지 ${7-verTaps}번`);
+}
+function devFill(days){
+  const pos=state.acts.filter(a=>!a.bad&&!a.adv),bad=state.acts.filter(a=>a.bad),r=Math.random;
+  for(let i=days;i>=0;i--){
+    const d=addDays(todayStr(),-i);if(d<state.startDate)state.startDate=d;
+    const pick=new Set();const n=Math.min(3+Math.floor(r()*4),new Set(pos.map(a=>a.grp||a.id)).size);let tries=0;
+    while(pick.size<n&&tries++<200){const a=pos[Math.floor(r()*pos.length)];if(a.grp&&[...pick].some(id=>(state.acts.find(x=>x.id===id)||{}).grp===a.grp))continue;pick.add(a.id)}
+    if(bad.length&&r()<.2)pick.add(bad[Math.floor(r()*bad.length)].id);
+    state.logs[d]=[...pick];
+    state.cond[d]=Object.fromEntries(COND.map(q=>[q.k,Math.floor(r()*4)]));
+    (state.studies||[]).filter(s=>!s.archived).forEach(s=>{if(r()<.6){state.slogs[d]=Object.assign({},state.slogs[d],{[s.id]:[['t60','t120','t180'][Math.floor(r()*3)]]})}});
+  }
+}
+function devCompleteQuests(){
+  const t=todayStr(),q=state.quests.d[t];if(!q)return;const log=new Set(state.logs[t]||[]);
+  q.ids.forEach(id=>{if(id==='cond')state.cond[t]=Object.fromEntries(COND.map(c=>[c.k,2]));else if(QUEST_ACT[id])log.add(QUEST_ACT[id])});
+  state.logs[t]=[...log];
+}
+function devPanel(){
+  if(!devMode)return;
+  const subs=SUBS.map(s=>`<option value="${s.k}">${s.n} (지금 시작 Lv ${state.base[s.k]})</option>`).join('');
+  showModal(`<div class="cbox still devbox"><h2>테스트 도구</h2><p>가상 날짜 <b>${fmtDay(todayStr())}</b>${devOffset?` (실제보다 ${devOffset>0?'+':''}${devOffset}일)`:''}</p>
+    <div class="devsec"><b>날짜 이동</b><div class="devrow"><button type="button" class="x" data-dev="d-1">−1일</button><button type="button" class="x" data-dev="d+1">+1일</button><button type="button" class="x" data-dev="d+7">+7일</button><button type="button" class="x" data-dev="d0">오늘로</button></div>
+      <span>기록 없이 날짜를 넘기면 빼먹은 날이 돼요. 보호권·연속 기록·차감 확인용</span></div>
+    <div class="devsec"><b>기록 채우기</b><div class="devrow"><button type="button" class="x" data-dev="f0">오늘 랜덤</button><button type="button" class="x" data-dev="f7">지난 7일</button><button type="button" class="x" data-dev="f30">지난 30일</button><button type="button" class="x" data-dev="del1">어제 기록 지우기</button></div></div>
+    <div class="devsec"><b>퀘스트</b><div class="devrow"><button type="button" class="x" data-dev="qdone">오늘 퀘스트 모두 완료</button><button type="button" class="x" data-dev="qnew">오늘 퀘스트 다시 뽑기</button></div></div>
+    <div class="devsec"><b>보상</b><div class="devrow"><button type="button" class="x" data-dev="seed">씨앗 +100</button><button type="button" class="x" data-dev="pxp">나 경험치 +200</button></div></div>
+    <div class="devsec"><b>능력치 시작 레벨</b><div class="devrow"><select id="devSub">${subs}</select><input id="devLv" type="number" min="0" max="100" value="29" inputmode="numeric"><button type="button" class="x" data-dev="lv">바꾸기</button></div>
+      <div class="devrow"><button type="button" class="x" data-dev="all29">모두 Lv 29 (승급 대기 테스트)</button><button type="button" class="x" data-dev="all85">모두 Lv 85 (고레벨 차감 테스트)</button></div></div>
+    <div class="devsec"><b>연출 미리보기</b><div class="devrow">${TIER_N.map((n,i)=>`<button type="button" class="x" data-dev="c${i}">${n}</button>`).join('')}<button type="button" class="x" data-dev="cpl">나 레벨 업</button></div></div>
+    <div class="row"><button type="button" class="btn ghost" data-dev="reset">처음 복사본으로</button><button type="button" class="btn danger" data-dev="exit">테스트 모드 끄기</button></div>
+    <button type="button" class="btn" data-cclose>닫기</button></div>`);
+  const el=celebEl();el.querySelector('[data-cclose]').onclick=closeModal;
+  el.querySelectorAll('[data-dev]').forEach(b=>b.onclick=()=>devAct(b.dataset.dev));
+}
+function devAct(a){
+  const again=()=>{closeModal();viewDay=todayStr();render();devPanel()};
+  if(a.startsWith('d')&&a!=='del1'){devOffset=a==='d0'?0:devOffset+parseInt(a.slice(1),10);return again()}
+  if(a==='f0'){devFill(0);return again()}
+  if(a==='f7'){devFill(7);return again()}
+  if(a==='f30'){devFill(30);return again()}
+  if(a==='del1'){const y=addDays(todayStr(),-1);delete state.logs[y];delete state.cond[y];delete (state.slogs||{})[y];return again()}
+  if(a==='qdone'){devCompleteQuests();return again()}
+  if(a==='qnew'){delete state.quests.d[todayStr()];return again()}
+  if(a==='seed'){state.devSeeds=(state.devSeeds||0)+100;return again()}
+  if(a==='pxp'){state.devXP=(state.devXP||0)+200;return again()}
+  if(a==='lv'){const k=$('#devSub').value,v=Math.max(0,Math.min(100,Math.round(+$('#devLv').value||0)));state.base=Object.assign({},state.base,{[k]:v});return again()}
+  if(a==='all29'||a==='all85'){const v=a==='all29'?29:85;state.base=Object.fromEntries(SUBS.map(s=>[s.k,v]));return again()}
+  if(a[0]==='c'&&a!=='cpl'){closeModal();const t=+a.slice(1);const ach=ACH.filter(x=>x.tier===t);celebQ.push({type:'ach',a:ach[Math.floor(Math.random()*ach.length)]});showNextCeleb();return}
+  if(a==='cpl'){closeModal();celebQ.push({type:'pl',from:curP.pl.lvl,to:curP.pl.lvl+1});showNextCeleb();return}
+  if(a==='reset'){state=JSON.parse(JSON.stringify(realState));devOffset=0;return again()}
+  if(a==='exit')return exitDev();
+}
+
 /* ---------- 그리기 ---------- */
 function render(){
   const app=$('#app');
@@ -1294,7 +1375,9 @@ function render(){
   if(tab==='stats')h+=renderStats(R);
   if(tab==='hist')h+=renderHist(R);
   if(tab==='set')h+=renderSet();
+  if(devMode)h=`<div class="devbar"><span><b>테스트 모드</b> · ${fmtDay(todayStr())}${devOffset?` (${devOffset>0?'+':''}${devOffset}일)`:''} · 저장 안 됨</span><button type="button" class="x" data-devopen>도구</button></div>`+h;
   app.innerHTML=h;bind();
+  const dv=$('[data-devopen]');if(dv)dv.onclick=devPanel;
   checkCelebrations(P);
 }
 let curP=null;
@@ -1484,7 +1567,7 @@ function renderSet(){
      ${confirmReset?`<div class="row"><button type="button" class="btn danger" id="doReset">지우고 다시 진단하기</button><button type="button" class="btn ghost" id="cancelReset">취소</button></div>`
        :`<button type="button" class="btn ghost" id="askReset">처음부터 다시 하기</button>`}
      <p class="small muted" style="margin:0">${ref?'기록은 내 계정에 저장돼요.':'기록은 이 기기에만 저장돼요. 앱을 지우면 기록도 사라지니 가끔 HTML 파일로 저장해 두세요.'}</p></div>
-   <p class="small muted" style="margin:0;text-align:center">나 키우기 ${APP_VERSION}</p>
+   <button type="button" class="verbtn" data-ver>나 키우기 ${APP_VERSION}</button>
   </section>`;
 }
 
@@ -1654,6 +1737,7 @@ function bind(){
     if(ref)ref.set({v:4,reset:true}).catch(()=>{});render();window.scrollTo(0,0)};
   const rd=$('#rediag');if(rd)rd.onclick=()=>{onboard=newOnboard(true);render();window.scrollTo(0,0)};
   bindStudy();bindBackup();bindProgress();
+  const vb=$('[data-ver]');if(vb)vb.onclick=devTapVersion;
 }
 function bindProgress(){
   document.querySelectorAll('[data-gotab]').forEach(b=>b.onclick=()=>{tab=b.dataset.gotab;render();window.scrollTo(0,0)});
@@ -1743,7 +1827,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{if(b.data
 
 /* ---------- 시작 ---------- */
 const RESET_ID='2026-10-14-reset1';   // 이 표시가 없는 예전 저장은 무시함 (초기화)
-const APP_VERSION='0.12 베타 (10월 15일)';
+const APP_VERSION='0.13 베타 (10월 15일)';
 const validShape=s=>!!(s&&s.base&&s.startDate&&Array.isArray(s.acts)&&s.logs);
 const valid=s=>validShape(s)&&s.resetId===RESET_ID;
 function adopt(s){const m=migrate(s);refreshActs(m);if(!m.quests)m.quests={d:{},w:{}};if(!m.cond)m.cond={};if(!m.studies)m.studies=[];if(!m.slogs)m.slogs={};if(!m.tests)m.tests=[];if(!m.crit)m.crit={};const changed=m!==s;state=m;return changed}

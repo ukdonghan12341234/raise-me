@@ -1,5 +1,5 @@
 // 나 키우기 오프라인 지원. 앱을 고치면 VERSION만 바꾸면 됨
-const VERSION='0.12.0';
+const VERSION='0.13.0';
 const CACHE='raise-me-'+VERSION;
 const CORE=['./','index.html','manifest.webmanifest','apple-touch-icon.png','icon-192.png','icon-512.png','icon-maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
