@@ -1,0 +1,1781 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>나 키우기</title>
+<meta name="description" content="내 상태로 능력치를 정하고 매일의 기록으로 나를 키우는 앱">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="나 키우기">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#E8EEEB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1517" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<style id="app-css">
+/* Layout: one-column phone app — character card on top, four tabs in a fixed bottom bar. */
+:root{
+  --bg:#E8EEEB; --surface:#F7FAF8; --sunk:#DDE6E2; --ink:#16232A; --muted:#58696E; --line:#C6D3CE;
+  --accent:#1E8752; --accent-ink:#FFFFFF; --bad:#BF4337;
+  --c-body:#D2522F; --c-intel:#2F62C4; --c-mind:#8150C2; --c-social:#B9840A; --c-life:#178069;
+  --f-display:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1517; --surface:#172124; --sunk:#111A1C; --ink:#E2EBE7; --muted:#8EA1A1; --line:#2A3A3D;
+  --accent:#49C285; --accent-ink:#0B1A12; --bad:#E7756A;
+  --c-body:#F07B57; --c-intel:#6C9BF2; --c-mind:#B48CF0; --c-social:#E8B53A; --c-life:#43C2A2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1517; --surface:#172124; --sunk:#111A1C; --ink:#E2EBE7; --muted:#8EA1A1; --line:#2A3A3D;
+  --accent:#49C285; --accent-ink:#0B1A12; --bad:#E7756A;
+  --c-body:#F07B57; --c-intel:#6C9BF2; --c-mind:#B48CF0; --c-social:#E8B53A; --c-life:#43C2A2; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:16px calc(84px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-size:22px} h3{font-size:18px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+button:not(:disabled):active{filter:brightness(.92)}
+.brk{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--line)}
+.brk:last-child{border-bottom:none}
+.brk>span:not(:first-child){text-align:right}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Character card */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:center}
+.avatar{width:76px;height:76px;border-radius:14px;background:var(--sunk);display:grid;place-items:center}
+.hero h1{font-size:28px;line-height:1.1}
+.hero .meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px;font-size:13px;color:var(--muted)}
+.badge{display:inline-block;font-family:var(--f-display);font-size:14px;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;grid-column:1/-1}
+.mini div{background:var(--sunk);border-radius:10px;padding:6px 4px;text-align:center}
+.mini b{display:block;font-family:var(--f-num);font-size:17px}
+.mini span{font-size:11px;color:var(--muted)}
+
+/* Panels */
+.panel{display:flex;flex-direction:column;gap:12px}
+.sec-label{font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:600}
+.daybar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.daybar button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:18px}
+.daybar button:disabled{opacity:.35;cursor:default}
+.daybar .d{text-align:center}
+.daybar .d b{font-family:var(--f-display);font-size:22px;font-weight:400;display:block}
+.delta{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.delta>div{border:1px solid var(--line);border-radius:10px;padding:6px 2px;text-align:center;background:var(--surface)}
+.delta .v{font-family:var(--f-num);font-size:16px;font-weight:600}
+.delta .n{font-size:11px;color:var(--muted)}
+.pos{color:var(--accent)} .neg{color:var(--bad)} .zero{color:var(--muted)}
+
+.acts{display:flex;flex-direction:column;gap:8px}
+.act{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;text-align:left;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.act .box{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:15px;color:transparent}
+.act.on{border-color:var(--accent)}
+.act.on .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.act.bad.on{border-color:var(--bad)}
+.act.bad.on .box{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.act .t{font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font-size:12px;padding:1px 7px;border-radius:999px;border:1px solid currentColor;font-family:var(--f-body)}
+.chip b{font-family:var(--f-num);font-weight:600}
+.note{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:12px;padding:10px 12px}
+
+/* Stats */
+.radar{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:8px}
+.radar svg{display:block;width:100%;height:auto;max-width:100%}
+.statrow{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:end}
+.statrow .nm{font-family:var(--f-display);font-size:19px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.statrow .lv{font-family:var(--f-num);font-size:26px;font-weight:600;line-height:1}
+.statrow .lv small{font-size:13px;color:var(--muted);font-weight:500}
+.bar{grid-column:1/-1;height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px}
+.statrow .sub{grid-column:1/-1;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+
+/* History */
+.hist{display:flex;flex-direction:column;gap:8px}
+.hrow{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.hrow.miss{background:transparent;border-style:dashed}
+.hrow .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.hrow .top b{font-family:var(--f-display);font-weight:400;font-size:17px}
+.ev{font-size:12px}
+
+/* Forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1 1 120px;min-width:0}
+.btn{border:none;border-radius:12px;padding:11px 14px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn.danger{background:var(--bad);color:var(--surface)}
+.btn:disabled{opacity:.5;cursor:default}
+.mlist{display:flex;flex-direction:column}
+.mitem{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.mitem:last-child{border-bottom:none}
+.x{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-size:13px;flex:none}
+
+/* Status tags + condition */
+.status{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.stag{font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:var(--sunk)}
+.cond{gap:12px}
+.crow{display:flex;flex-direction:column;gap:6px}
+.cn{font-size:13px;font-weight:600}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--sunk);border-radius:12px;padding:3px}
+.seg button{border:none;background:transparent;border-radius:9px;padding:10px 2px;min-height:44px;font-size:13px;line-height:1.25;color:var(--muted);min-width:0}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+
+/* Category cards with sub-abilities */
+.catcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cathead{width:100%;border:none;background:transparent;display:grid;grid-template-columns:1fr auto 22px;grid-template-areas:"nm lv ch" "ss ss ss";gap:4px 10px;align-items:center;padding:12px 14px;text-align:left}
+.cathead .nm{grid-area:nm;font-family:var(--f-display);font-size:19px;display:flex;align-items:center;gap:8px}
+.cathead .lv{grid-area:lv;font-family:var(--f-num);font-size:24px;font-weight:600;line-height:1}
+.cathead .lv small{font-size:12px;color:var(--muted);font-weight:500}
+.cathead .chev{grid-area:ch;font-family:var(--f-num);font-size:20px;color:var(--muted);text-align:center}
+.subsum{grid-area:ss;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.subsum b{color:var(--ink)}
+.subs{border-top:1px solid var(--line);display:flex;flex-direction:column}
+.subrow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.subrow:last-child{border-bottom:none}
+.subrow .sn{font-weight:600}
+.subrow .sl{font-size:20px;font-weight:600;line-height:1}
+.subrow .bar,.subrow .sub{grid-column:1/-1}
+.pill{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--sunk);color:var(--accent)}
+.pill.neg{color:var(--bad)}
+.grp{display:flex;justify-content:space-between;margin-top:4px}
+.qtag{display:inline-block;font-size:11px;font-weight:600;border:1px solid currentColor;border-radius:6px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.brk.head span{font-size:12px;color:var(--muted)}
+.brk.cat{font-family:var(--f-display);font-size:16px;border-bottom:none;padding-top:10px}
+.brk:not(.cat):not(.head)>span:first-child{padding-left:10px}
+
+
+.linkbtn{border:none;background:transparent;color:var(--accent);font-weight:600;font-size:13px;padding:6px 0;letter-spacing:0;text-transform:none}
+.studies{display:flex;flex-direction:column;gap:8px}
+.scard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.stop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.snm{font-family:var(--f-display);font-size:18px;line-height:1.2}
+.slv{display:flex;flex-direction:column;align-items:flex-end;flex:none}
+.slv .num:first-child{font-size:17px;font-weight:600}
+.sbtns{display:flex;flex-wrap:wrap;gap:6px}
+.sbtn{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-size:13px;min-height:40px}
+.sbtn b{color:var(--c-intel)}
+.sbtn.on{background:var(--c-intel);border-color:var(--c-intel);color:var(--surface)}
+.sbtn.on b{color:var(--surface)}
+.seg3{grid-template-columns:repeat(3,1fr)}
+.sact{display:flex;gap:6px}
+.x.danger{color:var(--bad);border-color:var(--bad)}
+
+
+/* Time tiers, promotion tests, confidence */
+.act.tier{cursor:default}
+.tiers{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tbtn,.tiers .sbtn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px;min-height:40px}
+.tbtn b{color:var(--accent)}
+.tbtn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tbtn.on b{color:var(--accent-ink)}
+.waitbar{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;width:100%;border:1px solid var(--c-social);background:var(--surface);border-radius:14px;padding:10px 12px}
+.waitbar b{font-family:var(--f-display);font-weight:400;font-size:17px;color:var(--c-social)}
+.waitbar .small{color:var(--muted)}
+.pill.wait{color:var(--c-social);font-size:11px;margin-left:6px;font-family:var(--f-body)}
+.scard>.pill.wait{margin-left:0;align-self:flex-start}
+.pills{display:flex;flex-wrap:wrap;gap:4px}
+.bar.full i{background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.35) 6px 12px)}
+.meas{grid-column:1/-1;background:var(--sunk);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.meas .btn{padding:9px 12px}
+.critrow{display:flex;flex-direction:column;gap:4px}
+.critrow input{font-family:var(--f-num);font-size:13px}
+.pm{font-size:12px;color:var(--bad);font-weight:500;margin-left:2px}
+.rules{line-height:1.7}
+
+.filebtn{display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--ink);font-size:15px;cursor:pointer;flex-direction:row}
+.filebtn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+
+[hidden]{display:none!important}
+.celeb[hidden]{display:none!important;pointer-events:none}
+/* 나 레벨 · 칭호 */
+.tchip{border:1px dashed var(--c-social);background:transparent;color:var(--c-social);border-radius:999px;padding:0 8px;font-size:13px;font-weight:600;line-height:1.6}
+.streak{color:var(--c-body);font-weight:600}
+.tchip.empty{color:var(--muted);border-color:var(--line);font-weight:500}
+.plrow{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;border:none;background:transparent;padding:0;text-align:left}
+.plrow b{font-family:var(--f-display);font-weight:400;font-size:16px;color:var(--c-social)}
+.plbar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden;display:block}
+.plbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--c-social),var(--accent))}
+.plcard{gap:8px}
+.plcard .sub{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted)}
+.plhead{display:flex;align-items:baseline;justify-content:space-between}
+.plbig{font-family:var(--f-display);font-size:34px;line-height:1;color:var(--c-social)}
+.ctier{font-size:12px;letter-spacing:.08em;font-weight:700;color:var(--muted)}
+/* 퀘스트 */
+.qstrip{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 12px}
+.qs-h{display:flex;justify-content:space-between}
+.qs-h b{font-family:var(--f-display);font-weight:400;font-size:17px}
+.qs-l{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--muted)}
+.qs-l .qd{color:var(--accent);text-decoration:line-through}
+.qcard{gap:4px}
+.qrow{display:grid;grid-template-columns:26px 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.qrow:last-of-type{border-bottom:none}
+.qchk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:13px}
+.qrow.done .qchk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.qrow.done .qt{color:var(--muted);text-decoration:line-through}
+.qxp{font-size:13px;font-weight:600;color:var(--c-social)}
+.aprog{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden;margin:6px 0 2px;width:100%}
+.aprog i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.note.locked{border:1px dashed var(--line);background:transparent}
+/* 업적 */
+.achgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.achb{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 4px 8px;min-width:0}
+.achb .ab{width:84px;height:84px;display:block;margin:-6px 0 -4px}
+.achb .ab svg{width:100%;height:100%}
+.achb:not(.got) .ab{opacity:.55}
+.achb .an{font-size:12px;font-weight:600;text-align:center;line-height:1.3;word-break:keep-all}
+.achb:not(.got) .an{color:var(--muted)}
+.at{font-size:10px;font-weight:700;letter-spacing:.06em}
+.at.t0{color:#B8692E}.at.t1{color:var(--muted)}.at.t2{color:#C89400}.at.t3{color:#8B5CF6}
+.achb.got.t3,.achb.got{box-shadow:none}
+.unl{gap:0}
+.urow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.urow:last-child{border-bottom:none}
+.ulv{font-weight:600;color:var(--muted)}
+.urow.ok .ulv{color:var(--c-social)}
+.un{font-weight:600}
+.advtag{display:inline-block;font-size:10px;font-weight:700;color:var(--c-social);border:1px solid currentColor;border-radius:5px;padding:0 4px;margin-right:6px;vertical-align:2px}
+.advlock{padding:2px 4px}
+.tlist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:40vh;overflow:auto;padding:4px}
+.tpick{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-size:14px}
+.tpick.on{border-color:var(--c-social);color:var(--c-social);font-weight:700}
+.seg4{grid-template-columns:repeat(4,1fr)}
+.seg button:disabled{opacity:.45}
+/* 달성 연출 */
+.celeb{position:fixed;inset:0;z-index:30;background:rgba(6,12,14,.72);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.cbox{position:relative;overflow:hidden;background:var(--surface);color:var(--ink);border-radius:24px;padding:24px 20px 18px;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;--ray:#9FB0BC;animation:cpop .55s cubic-bezier(.2,1.5,.4,1)}
+.cbox.t0{--ray:#C27838}.cbox.t2{--ray:#F0C02F}.cbox.t3{--ray:#B38CFF}
+.cbox>*{position:relative}
+.cbox h2{font-size:26px}
+.cbox p{margin:0;color:var(--muted);font-size:14px}
+.cbox .btn{margin-top:10px;width:100%}
+.crew{font-size:13px;font-weight:600;color:var(--c-social)}
+.rays{position:absolute!important;left:50%;top:-70px;width:420px;height:420px;margin-left:-210px;border-radius:50%;
+  background:repeating-conic-gradient(var(--ray) 0deg 9deg,transparent 9deg 22.5deg);opacity:.32;
+  -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 18%,transparent 62%);animation:spin 16s linear infinite}
+.cbadge{width:156px;height:156px;animation:bin .9s cubic-bezier(.2,1.4,.3,1) both;filter:drop-shadow(0 8px 14px rgba(0,0,0,.25))}
+.cbadge.sm{width:120px;height:120px;animation:none}
+.cbadge svg{width:100%;height:100%}
+.spark{position:absolute!important;width:8px;height:8px;border-radius:50%;background:var(--ray);animation:twinkle 1.6s ease-in-out infinite}
+.spark.s1{left:18%;top:22%}.spark.s2{right:16%;top:16%;animation-delay:.5s}.spark.s3{right:24%;top:44%;width:6px;height:6px;animation-delay:1s}
+.unlist{display:flex;flex-direction:column;gap:6px;width:100%;margin-top:6px}
+.unlist div{background:var(--sunk);border-radius:12px;padding:8px 10px;text-align:left;font-size:14px;display:flex;flex-direction:column}
+.unlist b{color:var(--c-social);font-size:12px}
+.unlist span{font-size:12px;color:var(--muted)}
+.cbox.still{animation:none}
+@keyframes cpop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@keyframes bin{0%{transform:scale(.2) rotate(-25deg);opacity:0}60%{transform:scale(1.12) rotate(6deg);opacity:1}100%{transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes twinkle{0%,100%{transform:scale(.4);opacity:.3}50%{transform:scale(1.3);opacity:1}}
+@media (prefers-reduced-motion: reduce){.cbox,.cbadge,.rays,.spark{animation:none!important}}
+/* 색 테마 */
+:root[data-skin="sea"]{--bg:#E6EEF3;--surface:#F6FAFC;--sunk:#D9E5EC;--line:#C3D3DD;--accent:#1C6FA8;--accent-ink:#FFFFFF}
+:root[data-skin="sunset"]{--bg:#F2E9E5;--surface:#FBF6F3;--sunk:#EADCD5;--line:#DCC9BF;--accent:#C4512B;--accent-ink:#FFFFFF}
+:root[data-skin="night"]{--bg:#EAE8F3;--surface:#F7F6FC;--sunk:#DDDAEC;--line:#CBC6E0;--accent:#5B4BC4;--accent-ink:#FFFFFF}
+@media (prefers-color-scheme: dark){
+ :root[data-skin="sea"]:not([data-theme="light"]){--bg:#0C141A;--surface:#14212A;--sunk:#0F1A21;--line:#253744;--accent:#5AB4F0;--accent-ink:#081521}
+ :root[data-skin="sunset"]:not([data-theme="light"]){--bg:#17100E;--surface:#221815;--sunk:#1B1311;--line:#3A2A24;--accent:#F08A5F;--accent-ink:#1E0E08}
+ :root[data-skin="night"]:not([data-theme="light"]){--bg:#0F0E1A;--surface:#191828;--sunk:#131221;--line:#2D2B45;--accent:#A99BFF;--accent-ink:#120F2A}}
+:root[data-theme="dark"][data-skin="sea"]{--bg:#0C141A;--surface:#14212A;--sunk:#0F1A21;--line:#253744;--accent:#5AB4F0;--accent-ink:#081521}
+:root[data-theme="dark"][data-skin="sunset"]{--bg:#17100E;--surface:#221815;--sunk:#1B1311;--line:#3A2A24;--accent:#F08A5F;--accent-ink:#1E0E08}
+:root[data-theme="dark"][data-skin="night"]{--bg:#0F0E1A;--surface:#191828;--sunk:#131221;--line:#2D2B45;--accent:#A99BFF;--accent-ink:#120F2A}
+
+
+/* 씨앗 · 정원 · 상점 */
+.seedic{width:1em;height:1em;vertical-align:-.12em;margin-right:2px}
+.seedtag{display:inline-flex;align-items:center;font-weight:600;color:var(--c-life);white-space:nowrap}
+.seedbig{font-family:var(--f-num);font-size:30px;font-weight:600;color:var(--c-life);display:flex;align-items:center;gap:4px}
+.qsubs{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;box-shadow:0 0 0 6px var(--bg)}
+.gardencard{align-items:stretch}
+.gplot{position:relative;align-self:center;width:180px;height:180px;border-radius:20px;background:var(--sunk);display:grid;place-items:center}
+.gplot>svg:first-child{width:150px;height:150px}
+.gplot .friend{width:40px;height:40px;top:14px;right:14px}
+.gname{display:flex;justify-content:center;align-items:center;gap:8px}
+.gname b{font-family:var(--f-display);font-weight:400;font-size:20px}
+.gardencard .row .btn{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+.btn .seedtag{color:inherit}
+.btn .seedic path:first-child{fill:currentColor}
+.btn .seedic path:last-child{stroke:var(--accent)}
+.btn.ghost .seedic path:first-child{fill:var(--c-life)}
+.btn.ghost .seedic path:last-child{stroke:var(--surface)}
+.tgl{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+.tgl input{width:20px;height:20px;accent-color:var(--accent)}
+.shop{gap:0}
+.shoprow{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.shoprow:last-child{border-bottom:none}
+.sic{width:44px;height:44px;border-radius:12px;background:var(--sunk);display:grid;place-items:center}
+.x.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.buyb{min-width:64px}
+.buyb:disabled{opacity:.45}
+.avatar{position:relative}
+.friend{position:absolute;width:24px;height:24px;top:4px;right:4px}
+
+/* Onboarding */
+.prog{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.qhead{display:flex;align-items:center;gap:10px}
+.qhead h2{flex:1}
+.qhead .dot{width:14px;height:14px;border-radius:4px}
+.q{display:flex;flex-direction:column;gap:8px}
+.q .qt{font-weight:600}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px 10px;min-height:48px;text-align:left;font-size:14px;line-height:1.35}
+.opt.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+.intro{font-size:15px;color:var(--muted);max-width:60ch}
+
+/* Bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(16px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
+nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+nav.tabs button{border:none;background:transparent;border-radius:12px;padding:8px 2px;font-family:var(--f-display);font-size:16px;color:var(--muted);min-width:0}
+nav.tabs button[aria-current="page"]{background:var(--sunk);color:var(--ink)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:14px;font-size:14px;max-width:calc(100% - 32px);z-index:9;transition:opacity .25s}
+.toast b{font-family:var(--f-display);font-weight:400;font-size:16px}
+.loading{padding:60px 0;text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="loading">불러오는 중…</div></div>
+<nav class="tabs" id="tabs" hidden><div class="in">
+  <button id="tab-today" data-tab="today">오늘</button>
+  <button id="tab-quest" data-tab="quest">도전</button>
+  <button id="tab-stats" data-tab="stats">능력치</button>
+  <button id="tab-hist" data-tab="hist">기록</button>
+  <button id="tab-set" data-tab="set">설정</button>
+</div></nav>
+<div class="toast" id="toast" hidden></div>
+
+<script id="app-js">
+
+window.addEventListener('error',e=>{try{const t=document.getElementById('toast');t.textContent='오류: '+(e.message||'알 수 없음');t.hidden=false}catch(_){}});
+(()=>{ // 화면이 새 버전으로 바뀌며 스크립트가 다시 실행돼도 충돌하지 않도록 전체를 감쌈
+/* ---------- 능력치: 5개 분야 × 세부 능력 3개 ---------- */
+const CATS=[
+ {k:'body',n:'체력',subs:[['endur','지구력'],['upper','상체 근력'],['lower','하체 근력']]},
+ {k:'intel',n:'지력',subs:[['know','지식'],['focus','집중력'],['expr','표현력']]},
+ {k:'mind',n:'정신력',subs:[['calm','평정심'],['grit','끈기'],['resil','회복력']]},
+ {k:'social',n:'사회성',subs:[['close','친밀감'],['talk','대화력'],['lead','리더십']]},
+ {k:'life',n:'생활력',subs:[['plan','계획성'],['tidy','정리정돈'],['care','자기관리']]},
+];
+const SUBS=[];CATS.forEach(c=>c.subs.forEach(([k,n])=>SUBS.push({k,n,cat:c.k})));
+const SUB=Object.fromEntries(SUBS.map(s=>[s.k,s]));
+const CATN=Object.fromEntries(CATS.map(c=>[c.k,c.n]));
+/* 레벨업에 필요한 경험치: 높을수록 느리게 */
+const NEED_BANDS=[[0,10],[20,15],[40,25],[60,45],[70,70],[80,110],[85,160],[90,230],[95,320]];
+const need=l=>NEED_BANDS.filter(b=>l>=b[0]).pop()[1];
+/* 하루 기본 차감: 레벨이 높을수록 크게, 활동 여부와 상관없이 매일 */
+/* 지력·체력: 시간을 늘리면 경험치도 늘어나서 차감이 큼. 나머지는 하루에 할 수 있는 양이 정해져 있어서 완화 */
+const TAX_HARD=[[0,0],[40,1],[60,3],[80,6],[85,8],[90,10],[95,12]];
+const TAX_SOFT=[[0,0],[50,1],[70,2],[85,3],[95,4]];
+const tax=(l,cat)=>(cat==='intel'||cat==='body'?TAX_HARD:TAX_SOFT).filter(b=>l>=b[0]).pop()[1];
+const catOf=k=>SUB[k]?SUB[k].cat:'intel';
+const isGate=l=>l%10===0&&l>0;
+const STALE_DAYS=30;
+
+/* 활동. grp가 같은 것은 시간 단계라서 하루에 하나만 고름 */
+const DEFAULT_ACTS=[
+ {id:'cardio',grp:'cardio',grpN:'유산소 (달리기·자전거·수영)',name:'30분',fx:{endur:2}},
+ {id:'cardio60',grp:'cardio',grpN:'유산소 (달리기·자전거·수영)',name:'1시간',fx:{endur:3}},
+ {id:'cardio120',grp:'cardio',grpN:'유산소 (달리기·자전거·수영)',name:'2시간 이상',fx:{endur:5}},
+ {id:'walk',name:'1시간 걷기 또는 1만 보',fx:{endur:2}},
+ {id:'upperw',grp:'upperw',grpN:'상체 근력 운동',name:'20분',fx:{upper:2}},
+ {id:'upperw40',grp:'upperw',grpN:'상체 근력 운동',name:'40분 이상',fx:{upper:3}},
+ {id:'lowerw',grp:'lowerw',grpN:'하체 근력 운동',name:'20분',fx:{lower:2}},
+ {id:'lowerw40',grp:'lowerw',grpN:'하체 근력 운동',name:'40분 이상',fx:{lower:3}},
+ {id:'fullw',name:'전신 운동·홈트 30분',fx:{upper:1,lower:1,endur:1}},
+ {id:'stairs',name:'엘리베이터 대신 계단',fx:{lower:1}},
+ {id:'study30',grp:'study',grpN:'공부·연구 (과목 외)',name:'30분',fx:{know:1}},
+ {id:'study',grp:'study',grpN:'공부·연구 (과목 외)',name:'1시간',fx:{know:2}},
+ {id:'study120',grp:'study',grpN:'공부·연구 (과목 외)',name:'2시간',fx:{know:4}},
+ {id:'study180',grp:'study',grpN:'공부·연구 (과목 외)',name:'3시간 이상',fx:{know:6}},
+ {id:'lecture',name:'강의·세미나 듣기',fx:{know:2}},
+ {id:'read',grp:'read',grpN:'독서',name:'30분',fx:{know:1,focus:1}},
+ {id:'read60',grp:'read',grpN:'독서',name:'1시간',fx:{know:2,focus:1}},
+ {id:'read120',grp:'read',grpN:'독서',name:'2시간 이상',fx:{know:3,focus:2}},
+ {id:'deep60',grp:'deep',grpN:'폰 없이 몰입',name:'1시간',fx:{focus:2}},
+ {id:'deep',grp:'deep',grpN:'폰 없이 몰입',name:'2시간',fx:{focus:3}},
+ {id:'deep180',grp:'deep',grpN:'폰 없이 몰입',name:'3시간 이상',fx:{focus:5}},
+ {id:'write',grp:'write',grpN:'글쓰기 (보고서·일기·블로그)',name:'30분',fx:{expr:2}},
+ {id:'write60',grp:'write',grpN:'글쓰기 (보고서·일기·블로그)',name:'1시간 이상',fx:{expr:3}},
+ {id:'present',name:'발표하거나 남에게 설명하기',fx:{expr:2,talk:1}},
+ {id:'meditate',name:'명상·호흡 10분',fx:{calm:3}},
+ {id:'rest',name:'산책이나 취미로 쉬기',fx:{calm:2,resil:1}},
+ {id:'hardtask',name:'하기 싫은 일 끝까지 하기',fx:{grit:3}},
+ {id:'habit',name:'매일 하는 습관 지키기',fx:{grit:2}},
+ {id:'bounce',name:'힘든 일 뒤 기분 전환하기',fx:{resil:3}},
+ {id:'journal',name:'감사·회고 일기',fx:{resil:2,calm:1}},
+ {id:'deeptalk',name:'가족·친구와 깊은 대화',fx:{close:4}},
+ {id:'reachout',name:'먼저 연락·안부 묻기',fx:{close:2}},
+ {id:'newppl',name:'새로운 사람과 대화',fx:{talk:4}},
+ {id:'speakup',name:'모임·수업에서 의견 말하기',fx:{talk:2,lead:1}},
+ {id:'leadrole',name:'모임 이끌기·역할 맡기',fx:{lead:5}},
+ {id:'help',name:'다른 사람 도와주기',fx:{close:1,lead:1}},
+ {id:'planday',name:'하루 계획 세우기',fx:{plan:2}},
+ {id:'plandone',name:'계획한 일 80% 이상 해내기',fx:{plan:3}},
+ {id:'tidyroom',name:'방·책상 정리',fx:{tidy:3}},
+ {id:'chores',name:'빨래·설거지 등 집안일',fx:{tidy:2}},
+ {id:'meals',name:'세 끼 제때 먹기',fx:{care:2}},
+ {id:'budget',name:'가계부·지출 기록',fx:{care:2,plan:1}},
+ {id:'sleeptime',name:'정해진 시간에 자고 일어나기',fx:{care:3}},
+ {id:'late',name:'밤샘·새벽 3시 이후 취침',fx:{care:-3,endur:-1},bad:true},
+ {id:'phone',name:'폰·영상 3시간 이상',fx:{focus:-3,calm:-1},bad:true},
+ {id:'procr',name:'할 일 미루기',fx:{plan:-2,grit:-2},bad:true},
+ {id:'binge',name:'폭식·늦은 야식',fx:{care:-2},bad:true},
+ {id:'drink',name:'과음',fx:{care:-2,resil:-1},bad:true},
+ {id:'flake',name:'약속 어기기·연락 무시',fx:{close:-2},bad:true},
+ {id:'impulse',name:'충동 지출',fx:{care:-2},bad:true},
+];
+/* 이전 버전 활동 → 새 활동 */
+const OLD_ACT={ex:'cardio',meal:'meals',st:'study',rd:'read',md:'rest',tk:'deeptalk',ct:'reachout',pl:'plandone',cl:'tidyroom',nt:'late',ph:'phone',pr:'procr',jf:'binge'};
+/* 기본으로 들어있던 활동 id들. 이 밖의 'c…' id만 직접 추가한 활동 */
+const KNOWN_IDS=new Set(['ex','sl','meal','st','rd','md','tk','ct','pl','cl','nt','ph','pr','jf','cardio','walk','upperw','lowerw','fullw','stairs','study','lecture','read','deep','write','present','meditate','rest','hardtask','habit','bounce','journal','deeptalk','reachout','newppl','speakup','leadrole','help','planday','plandone','tidyroom','chores','meals','budget','sleeptime','late','phone','procr','binge','drink','flake','impulse']);
+const isCustom=a=>String(a.id).startsWith('c')&&!KNOWN_IDS.has(a.id)&&!DEFAULT_ACTS.some(d=>d.id===a.id);
+const OLD_CAT_SUB={body:'endur',intel:'know',mind:'calm',social:'close',life:'plan'};
+
+/* 자기 평가 질문: [세부 능력, 질문, 보기(나쁜 쪽 → 좋은 쪽, 0~3점)] */
+const QSETS={
+ body:[
+  ['endur','계단으로 3층을 오르면?',['숨이 많이 참','조금 숨참','괜찮음','가뿐함']],
+  ['endur','하루에 걷는 양은?',['3천 보 미만','3천~6천 보','6천~1만 보','1만 보 이상']],
+  ['upper','무거운 장바구니나 캐리어를 드는 건?',['매우 힘듦','조금 힘듦','괜찮음','쉬움']],
+  ['upper','상체 운동 (팔굽혀펴기·덤벨 등) 빈도는?',['거의 안 함','한 달에 몇 번','주 1~2번','주 3번 이상']],
+  ['lower','오르막이나 긴 계단을 오르면 다리가?',['금방 뻐근함','조금 뻐근함','괜찮음','거뜬함']],
+  ['lower','하체 운동 (스쿼트·런지 등) 빈도는?',['거의 안 함','한 달에 몇 번','주 1~2번','주 3번 이상']]],
+ intel:[
+  ['know','하루 공부·연구 시간은?',['거의 없음','30분 정도','1~2시간','3시간 이상']],
+  ['know','한 달에 읽는 책은?',['0권','1권','2~3권','4권 이상']],
+  ['focus','한 가지 일에 집중할 수 있는 시간은?',['10분 미만','10~30분','30분~1시간','1시간 이상']],
+  ['focus','공부·작업 중 폰을 보는 빈도는?',['5분마다','15분마다','30분마다','거의 안 봄']],
+  ['focus','하루 폰·영상 시간은?',['5시간 이상','3~5시간','1~3시간','1시간 미만']],
+  ['expr','공부한 내용을 남에게 설명할 수 있어요?',['거의 못 함','일부만','대체로','자신 있게']],
+  ['expr','보고서나 긴 글을 쓰는 건?',['매우 어려움','어려운 편','괜찮음','잘 씀']]],
+ mind:[
+  ['calm','요즘 스트레스는?',['매우 높음','높은 편','보통','낮은 편']],
+  ['calm','화나거나 불안할 때 가라앉히는 건?',['거의 못 함','오래 걸림','어느 정도 됨','금방 됨']],
+  ['grit','시작한 일을 끝까지 하는 편?',['자주 포기','절반 정도','대체로 끝냄','거의 늘 끝냄']],
+  ['grit','하기 싫은 일도 해야 하면?',['계속 미룸','마감 직전에','조금 미루다 함','바로 함']],
+  ['resil','안 좋은 일이 생기면 회복까지?',['며칠 이상','하루 정도','몇 시간','금방']],
+  ['resil','최근 2주 기분은?',['자주 가라앉음','오르내림이 큼','대체로 괜찮음','안정적']]],
+ social:[
+  ['close','고민을 털어놓을 수 있는 사람은?',['없음','1명','2~3명','여러 명']],
+  ['close','가족·친구와 연락하는 빈도는?',['거의 안 함','한 달에 몇 번','주에 몇 번','거의 매일']],
+  ['talk','처음 보는 사람과 대화하는 건?',['매우 어려움','어려운 편','괜찮음','편함']],
+  ['talk','일주일에 사람과 대화하는 날은?',['거의 없음','1~2일','3~4일','거의 매일']],
+  ['lead','모임이나 수업에서 의견을 말하는 편?',['거의 안 함','가끔','자주','늘 말함']],
+  ['lead','조별 과제나 모임에서 역할은?',['따라가는 편','시키면 맡음','먼저 맡기도 함','주로 이끔']]],
+ life:[
+  ['plan','하루를 계획대로 보내는 편이에요?',['거의 안 됨','가끔','대체로','항상']],
+  ['plan','마감은 잘 지켜요?',['자주 늦음','아슬아슬','대체로 지킴','여유 있게']],
+  ['tidy','방·책상 정리 상태는?',['엉망','가끔 치움','보통','늘 깔끔']],
+  ['tidy','설거지·빨래 같은 집안일은?',['쌓일 때까지 둠','미루는 편','제때 하는 편','바로바로 함']],
+  ['care','일어나는 시간은?',['매일 다름','자주 바뀜','대체로 일정','항상 일정']],
+  ['care','요즘 평균 수면 시간은?',['5시간 미만','5~6시간','6~7시간','7시간 이상']],
+  ['care','식사는 규칙적으로 해요?',['자주 거름','불규칙함','대체로 규칙적','늘 규칙적']]],
+};
+/* 실제 이력: 자기 평가 위에 더하는 보너스. 첫 보기는 항상 0점 */
+const SPEC=[
+ {k:'endur',t:'쉬지 않고 달릴 수 있는 거리',o:['1km 미만','1~3km','3~5km','5km 이상'],b:[0,3,6,10]},
+ {k:'upper',t:'팔굽혀펴기 연속 개수',o:['5개 미만','5~15개','16~30개','30개 이상'],b:[0,3,6,10]},
+ {k:'lower',t:'맨몸 스쿼트 연속 개수',o:['20개 미만','20~40개','41~70개','70개 이상'],b:[0,3,6,10]},
+ {k:'know',t:'최종 학력 (재학 포함)',o:['고졸 이하','전문대','4년제 대학','대학원'],b:[0,2,4,7]},
+ {k:'know',t:'학교 수준',o:['선택 안 함','일반 대학','상위권 대학','최상위권 (서울대·KAIST·POSTECH·연고대 등)'],b:[0,2,5,9]},
+ {k:'know',t:'공인 시험·자격증 (어학 고득점, 전문 자격 등)',o:['없음','1개','2개','3개 이상'],b:[0,2,4,6]},
+ {k:'know',t:'연구·논문 실적',o:['없음','연구 참여','학회 발표','논문 게재'],b:[0,2,4,6]},
+ {k:'expr',t:'발표·강의 경험',o:['거의 없음','몇 번','자주','일로 함'],b:[0,2,5,8]},
+ {k:'grit',t:'1년 이상 이어온 습관이나 목표',o:['없음','1개','2개','3개 이상'],b:[0,3,5,8]},
+ {k:'grit',t:'큰 시험이나 도전을 끝까지 해낸 경험',o:['없음','1번','2~3번','여러 번'],b:[0,2,4,6]},
+ {k:'talk',t:'사람을 상대하는 일 (알바·과외·강의 등)',o:['없음','잠깐 해봄','1년 이상','본업으로 함'],b:[0,2,4,7]},
+ {k:'lead',t:'리더·대표를 맡아본 경험',o:['없음','1번','여러 번','지금도 맡고 있음'],b:[0,3,6,9]},
+ {k:'tidy',t:'혼자 살림한 기간',o:['안 해봄','1년 미만','1~3년','3년 이상'],b:[0,2,4,6]},
+ {k:'care',t:'돈 관리 (가계부·예산)',o:['안 함','가끔','꾸준히','철저히'],b:[0,1,3,5]},
+ {k:'care',t:'요리 실력',o:['거의 못 함','간단한 것만','자주 해 먹음','손님상도 차림'],b:[0,2,3,5]},
+];
+const BONUS_CAP=25, BASE_CAP=95;
+/* 공부 목록: 사용자가 직접 추가. 종류마다 활동과 시작 질문이 다름. 'time'은 공부 시간 단계 */
+const TIME_TIERS=k30=>[[k30,'30분',1,'time'],['t60','1시간',2,'time'],['t120','2시간',4,'time'],['t180','3시간 이상',6,'time']];
+const STYPES={
+ school:{n:'학교 과목',goalPh:'예: A+ 받기',dateN:'시험일',
+  acts:[...TIME_TIERS('review'),['class','수업 듣기',1],['hw','과제 하기',2]],
+  qs:[['수업 이해도는?',['거의 모름','절반 정도','대체로 이해','완벽히 이해']],
+      ['지금까지 성적은? (시험·퀴즈가 없었다면 예상)',['낮음','보통 이하','보통 이상','높음']],
+      ['과제·출석은?',['자주 놓침','가끔 놓침','거의 챙김','완벽히 챙김']]]},
+ exam:{n:'자격증·어학',goalPh:'예: JLPT N2 합격',dateN:'시험일',
+  acts:[...TIME_TIERS('study'),['memo','단어·암기',1],['drill','문제 풀이',2],['mock','모의고사·기출',3]],
+  qs:[['지금 실력은?',['입문','기초','중급','목표 수준에 가까움']],
+      ['이 공부를 해온 기간은?',['이제 시작','1개월 미만','1~6개월','6개월 이상']],
+      ['모의고사·기출 결과는 목표와 비교해서?',['안 풀어봄','많이 낮음','조금 낮음','목표 이상']]]},
+ etc:{n:'기타 공부',goalPh:'예: 파이썬으로 앱 만들기',dateN:'목표일',
+  acts:[...TIME_TIERS('study'),['note','정리·복습',1]],
+  qs:[['지금 수준은?',['입문','기초','중급','상급']],
+      ['이 공부를 해온 기간은?',['이제 시작','1개월 미만','1~6개월','6개월 이상']],
+      ['배운 걸 혼자 응용할 수 있어요?',['전혀','조금','대체로','자유롭게']]]},
+};
+const S_ALIAS={school:{exam:'t60'},etc:{deep:'t60'}};   // 이전 버전 활동 이름
+const sAct=(s,k)=>STYPES[s.type].acts.find(a=>a[0]===k);
+const paused=(s,d)=>(s.pauses||[]).some(([f,t])=>f<d&&(t==null||d<t));
+const dday=s=>{if(!s.date)return '';const n=daysBetween(todayStr(),s.date);return n>0?'D-'+n:n===0?'D-day':'D+'+(-n)};
+
+/* 승급 시험 기준: 10레벨마다(10,20,…,100) 이 값 이상이면 통과. 설정에서 고칠 수 있음 */
+const DAYS14=[2,3,4,5,6,7,8,10,12,13];
+const TESTS={
+ endur:{m:'쉬지 않고 달린 거리',u:'km',t:[0.5,1,2,3,4,5,7,10,15,21]},
+ upper:{m:'팔굽혀펴기 연속',u:'개',t:[3,5,10,15,20,30,40,50,60,75]},
+ lower:{m:'맨몸 스쿼트 연속',u:'개',t:[10,20,30,40,50,70,90,110,130,150]},
+ know:{m:'최근 시험·퀴즈 점수 (100점 환산)',u:'점',t:[20,30,40,50,60,70,80,88,94,98]},
+ focus:{m:'폰 없이 한 번에 집중한 시간',u:'분',t:[10,15,25,35,50,70,90,120,150,180]},
+ expr:{m:'발표·글에 대한 평가 점수 (100점 환산)',u:'점',t:[20,30,40,50,60,70,80,88,94,98]},
+ calm:{m:'최근 14일 중 스트레스가 낮음·보통이었던 날',u:'일',t:[3,4,5,6,7,8,9,10,12,13]},
+ grit:{m:'최근 14일 중 하기 싫은 일을 끝까지 한 날',u:'일',t:[1,2,3,4,5,6,8,10,12,13]},
+ resil:{m:'최근 14일 중 기분이 보통·좋음이었던 날',u:'일',t:[3,4,5,6,7,8,9,10,12,13]},
+ close:{m:'최근 14일 동안 깊은 대화를 나눈 사람 수',u:'명',t:[1,1,2,2,3,3,4,5,6,8]},
+ talk:{m:'최근 14일 동안 처음 만나 대화한 사람 수',u:'명',t:[1,1,2,2,3,4,5,6,8,10]},
+ lead:{m:'최근 30일 동안 이끌거나 맡은 일',u:'번',t:[1,1,2,2,3,3,4,5,6,8]},
+ plan:{m:'최근 14일 중 계획한 일을 80% 이상 해낸 날',u:'일',t:DAYS14},
+ tidy:{m:'최근 14일 중 정리·집안일을 한 날',u:'일',t:DAYS14},
+ care:{m:'최근 14일 중 정해진 시간에 자고 일어난 날',u:'일',t:DAYS14},
+};
+const STUDY_TEST={m:'최근 시험·모의고사 점수 (100점 환산)',u:'점',t:[20,30,40,50,60,70,80,88,94,98]};
+/* 기록에서 바로 셀 수 있는 기준은 최근 14일 기록으로 미리 채워 줌 */
+const AUTO={
+ calm:d=>{const c=state.cond[d];return c&&c.stress!=null&&c.stress<=1},
+ resil:d=>{const c=state.cond[d];return c&&c.mood!=null&&c.mood>=2},
+ grit:d=>(state.logs[d]||[]).includes('hardtask'),
+ plan:d=>(state.logs[d]||[]).includes('plandone'),
+ tidy:d=>(state.logs[d]||[]).some(id=>id==='tidyroom'||id==='chores'),
+ care:d=>(state.logs[d]||[]).includes('sleeptime'),
+};
+/* 오늘 컨디션: 그날 경험치에 더해지는 상태 효과 (유지 기간에는 영향 없음) */
+const COND=[
+ {k:'sleep',n:'어젯밤 수면',o:['5시간 미만','5~6시간','6~7시간','7시간 이상'],fx:[{care:-2,resil:-1},{care:-1},{},{care:1,resil:1}],tag:['수면 부족',null,null,'푹 잠']},
+ {k:'mood',n:'기분',o:['나쁨','별로','보통','좋음'],fx:[{resil:-2},{resil:-1},{},{resil:1}],tag:['기분 저조',null,null,'기분 좋음']},
+ {k:'energy',n:'에너지',o:['지침','낮음','보통','넘침'],fx:[{endur:-1},{},{},{endur:1}],tag:['지침',null,null,'활력']},
+ {k:'stress',n:'스트레스',o:['낮음','보통','높음','매우 높음'],fx:[{calm:1},{},{calm:-1},{calm:-2}],tag:['여유',null,'스트레스','스트레스 심함']},
+];
+const TITLES=[[0,'새싹'],[20,'견습생'],[40,'단련생'],[60,'숙련자'],[80,'베테랑'],[95,'전설']];
+
+function condFx(c){const fx={};if(!c)return fx;COND.forEach(q=>{const v=c[q.k];if(v==null)return;const f=q.fx[v];for(const k in f)fx[k]=(fx[k]||0)+f[k]});return fx}
+function condTags(c){if(!c)return[];return COND.map(q=>c[q.k]!=null?{t:q.tag[c[q.k]],bad:Object.values(q.fx[c[q.k]]).some(v=>v<0)}:null).filter(x=>x&&x.t)}
+
+/* ---------- 날짜 (기기 시간 기준) ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(s,n)=>{const t=toDate(s);t.setDate(t.getDate()+n);return ymd(t)};
+const daysBetween=(a,b)=>Math.round((toDate(b)-toDate(a))/864e5);
+const todayStr=()=>ymd(new Date());
+const WD='일월화수목금토';
+const fmtDay=s=>{const t=toDate(s);return `${t.getMonth()+1}월 ${t.getDate()}일 (${WD[t.getDay()]})`};
+
+/* ---------- 성장 엔진 ---------- */
+/* gateOk(nl): nl이 10의 배수일 때 승급 시험을 통과했는지. 통과 전에는 경험치가 가득 찬 채로 멈춤 */
+function applyXP(s,amt,gateOk){
+  s.xp+=amt;s.wait=0;
+  while(s.lvl<100&&s.xp>=need(s.lvl)){
+    const nl=s.lvl+1;
+    if(isGate(nl)&&!gateOk(nl)){s.xp=need(s.lvl);s.wait=nl;break}
+    s.xp-=need(s.lvl);s.lvl++;
+  }
+  if(s.lvl>=100){s.lvl=100;s.xp=0}
+  while(s.xp<0&&s.lvl>0){s.lvl--;s.xp+=need(s.lvl)}
+  if(s.xp<0)s.xp=0;
+}
+const critOf=k=>{const d=SUB[k]?TESTS[k]:STUDY_TEST;const o=(state&&state.crit||{})[k];return {m:d.m,u:d.u,t:o&&o.length===10?o:d.t}};
+const gatesFor=(k,v)=>{const t=critOf(k).t;return t.map((x,i)=>v>=x?(i+1)*10:0).filter(Boolean)};
+function replay(st){
+  const today=todayStr();
+  const tests=st.tests||[];
+  const passed=(k,base,nl,d)=>nl<=base||tests.some(r=>r.k===k&&r.date<=d&&r.gates.includes(nl));
+  const cur={};SUBS.forEach(s=>cur[s.k]={lvl:st.base[s.k],xp:Math.floor(need(st.base[s.k])/2),wait:0});
+  const acts=Object.fromEntries(st.acts.map(a=>[a.id,a]));
+  const studies=st.studies||[];const scur={};
+  studies.forEach(s=>scur[s.id]={lvl:s.base,xp:Math.floor(need(s.base)/2),wait:0});
+  const days=[];let d=st.startDate,g=0;
+  while(d<=today&&g++<4000){
+    const log=st.logs[d]||[];const cond=(st.cond||{})[d];const sl=(st.slogs||{})[d]||{};let studied=false;
+    const delta=Object.fromEntries(SUBS.map(s=>[s.k,0]));const taxed={};const sdelta={},stax={};
+    const anyS=Object.values(sl).some(a=>a&&a.length);
+    const kind=(log.length||cond||anyS)?'log':d<today?'miss':'none';
+    log.forEach(id=>{const a=acts[id];if(!a)return;for(const k in a.fx)if(SUB[k])delta[k]+=a.fx[k]});
+    studies.forEach(s=>{
+      if(d<s.start||paused(s,d))return;
+      const a=(sl[s.id]||[]).filter(k=>sAct(s,k));let x=0;
+      a.forEach(k=>x+=sAct(s,k)[2]);
+      if(a.length)studied=true;
+      const tx=tax(scur[s.id].lvl,'intel');if(tx){x-=tx;stax[s.id]=tx}
+      sdelta[s.id]=x;
+    });
+    if(studied)delta.know+=1;           // 공부 목록을 공부한 날은 지식 +1 (과목 수와 상관없이 하루 한 번)
+    SUBS.forEach(s=>{const tx=tax(cur[s.k].lvl,s.cat);if(tx){delta[s.k]-=tx;taxed[s.k]=tx}});   // 하루 기본 차감
+    const cf=condFx(cond);for(const k in cf)if(SUB[k])delta[k]+=cf[k];
+    const ev=[],sev=[];
+    SUBS.forEach(s=>{const c=cur[s.k],b=c.lvl;applyXP(c,delta[s.k],nl=>passed(s.k,st.base[s.k],nl,d));if(c.lvl!==b)ev.push({k:s.k,from:b,to:c.lvl})});
+    for(const id in sdelta){const s=studies.find(z=>z.id===id),c=scur[id],b=c.lvl;applyXP(c,sdelta[id],nl=>passed(id,s.base,nl,d));if(c.lvl!==b)sev.push({id,from:b,to:c.lvl})}
+    days.push({d,kind,delta,taxed,ev,sdelta,stax,sev,snap:Object.fromEntries(SUBS.map(s=>[s.k,cur[s.k].lvl])),ssnap:Object.fromEntries(studies.map(s=>[s.id,scur[s.id].lvl]))});
+    d=addDays(d,1);
+  }
+  return {cur,days,scur};
+}
+/* 마지막으로 실제로 잰 날. 30일이 지나면 ± 범위로 표시 */
+function lastMeasured(k,fallback){const r=(state.tests||[]).filter(x=>x.k===k).map(x=>x.date).sort().pop();return r&&r>fallback?r:fallback}
+function lvText(lvl,k,fallback){
+  const age=daysBetween(lastMeasured(k,fallback),todayStr());
+  if(age<STALE_DAYS)return {t:String(lvl),pm:0,age};
+  const pm=Math.min(10,3*Math.floor(age/STALE_DAYS));return {t:`${lvl}<small class="pm">±${pm}</small>`,pm,age};
+}
+const catLv=(lv,c)=>Math.round(c.subs.reduce((a,[k])=>a+lv[k],0)/c.subs.length);
+const catLevels=cur=>Object.fromEntries(CATS.map(c=>[c.k,catLv(Object.fromEntries(SUBS.map(s=>[s.k,cur[s.k].lvl])),c)]));
+const avgOf=o=>Math.round(Object.values(o).reduce((a,b)=>a+b,0)/Object.values(o).length);
+const titleOf=v=>TITLES.filter(t=>v>=t[0]).pop()[1];
+const catDelta=delta=>Object.fromEntries(CATS.map(c=>[c.k,c.subs.reduce((a,[k])=>a+delta[k],0)]));
+
+/* ---------- 이전 버전 기록 옮기기 ---------- */
+function migrate(s){
+  s=migrate3(s);if(!s||s.v>=4)return s;
+  const acts=JSON.parse(JSON.stringify(DEFAULT_ACTS));
+  (s.acts||[]).filter(isCustom).forEach(a=>acts.push(a));
+  const ids=new Set(acts.map(a=>a.id));const logs={};
+  for(const d in s.logs||{}){const l=s.logs[d].filter(id=>ids.has(id));if(l.length)logs[d]=l}
+  const slogs={};
+  for(const d in s.slogs||{}){slogs[d]={};for(const id in s.slogs[d]){const st=(s.studies||[]).find(z=>z.id===id);if(!st)continue;const al=S_ALIAS[st.type]||{};
+    slogs[d][id]=[...new Set(s.slogs[d][id].map(k=>al[k]||k))]}}
+  return Object.assign({},s,{v:4,acts,logs,slogs,studies:(s.studies||[]).map(z=>{const c=Object.assign({},z);delete c.lastHit;return c}),tests:s.tests||[],crit:s.crit||{}});
+}
+function migrate3(s){
+  if(!s||s.v>=3)return s;
+  const base={};SUBS.forEach(x=>base[x.k]=s.base[x.cat]!=null?s.base[x.cat]:30);
+  const acts=JSON.parse(JSON.stringify(DEFAULT_ACTS));
+  (s.acts||[]).filter(isCustom).forEach(a=>{
+    const fx={};for(const k in a.fx){const nk=OLD_CAT_SUB[k]||k;if(SUB[nk])fx[nk]=a.fx[k]}
+    if(Object.keys(fx).length)acts.push({id:a.id,name:a.name,fx,bad:a.bad})});
+  const ids=new Set(acts.map(a=>a.id));const logs={};
+  for(const d in s.logs||{}){const l=[...new Set(s.logs[d].map(id=>OLD_ACT[id]||id).filter(id=>ids.has(id)))];if(l.length)logs[d]=l}
+  return {v:3,name:s.name||'나',base,startDate:s.startDate,diagnosedAt:s.diagnosedAt||s.startDate,acts,logs,cond:s.cond||{},migratedFrom:s.v||1};
+}
+
+/* ---------- 저장: 내 계정 전용 저장소, 없으면 이 기기 ---------- */
+let state=null, db=null, ref=null, saveTimer=null, writing=false, pending=false;
+const LS='raise-me-v1';
+function lsGet(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+function lsSet(v){try{localStorage.setItem(LS,JSON.stringify(v))}catch(e){}}
+function save(){state.savedAt=new Date().toISOString();state.resetId=RESET_ID;lsSet(state);clearTimeout(saveTimer);saveTimer=setTimeout(flush,600)}
+async function flush(){
+  if(!ref)return;
+  if(writing){pending=true;return}
+  writing=true;
+  try{await ref.set(JSON.parse(JSON.stringify(state)))}catch(e){showToast('저장하지 못했어요. 이 기기에는 남아 있어요.')}
+  writing=false;
+  if(pending){pending=false;flush()}
+}
+
+/* ---------- 화면 상태 ---------- */
+let tab='today', viewDay=todayStr(), onboard=null, confirmReset=false;
+const openCats=new Set();
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sgn=n=>n>0?'+'+n:String(n);
+const cls=n=>n>0?'pos':n<0?'neg':'zero';
+const color=k=>`var(--c-${SUB[k]?SUB[k].cat:k})`;
+
+function fxChips(fx){return '<div class="chips">'+Object.entries(fx).filter(([k])=>SUB[k]).map(([k,v])=>`<span class="chip" style="color:${color(k)}">${SUB[k].n} <b>${sgn(v)}</b></span>`).join('')+'</div>'}
+function sprout(stage,pot){
+  const L='var(--accent)',S='var(--c-life)',P='var(--c-social)',soil='var(--muted)';
+  const base={
+    pot:`<path d="M20 58H56V63H20Z" fill="var(--c-body)"/><path d="M23 63H53L49 74H27Z" fill="var(--c-body)" opacity=".8"/>`,
+    jar:`<path d="M22 40H54V70Q54 74 50 74H26Q22 74 22 70Z" fill="var(--accent)" fill-opacity=".12" stroke="var(--muted)" stroke-width="1.5"/><path d="M24 62H52" stroke="${soil}" stroke-width="3"/>`,
+    cloud:`<path d="M18 68Q12 68 12 62Q12 56 19 56Q21 50 28 51Q33 46 40 50Q47 47 51 53Q60 52 62 59Q66 62 63 66Q61 68 57 68Z" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>`,
+  }[pot]||`<path d="M14 62 Q38 56 62 62" stroke="${soil}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  const parts=[base];
+  if(stage===0)parts.push(`<ellipse cx="38" cy="56" rx="7" ry="5" fill="${P}"/>`);
+  else{
+    const h=[0,14,22,30,36][stage];
+    parts.push(`<path d="M38 60 L38 ${60-h}" stroke="${S}" stroke-width="3" stroke-linecap="round"/>`);
+    parts.push(`<path d="M38 ${60-h+4} Q26 ${60-h-4} 24 ${60-h+8} Q32 ${60-h+12} 38 ${60-h+4}Z" fill="${L}"/>`);
+    parts.push(`<path d="M38 ${60-h+4} Q50 ${60-h-4} 52 ${60-h+8} Q44 ${60-h+12} 38 ${60-h+4}Z" fill="${L}"/>`);
+    if(stage>=3)parts.push(`<path d="M38 ${60-h/2} Q28 ${60-h/2-6} 26 ${60-h/2+2} Q33 ${60-h/2+6} 38 ${60-h/2}Z" fill="${S}"/>`);
+    if(stage>=4)parts.push(`<circle cx="38" cy="${60-h-3}" r="6" fill="${P}"/><circle cx="38" cy="${60-h-3}" r="2.5" fill="var(--surface)"/>`);
+  }
+  return `<svg viewBox="0 0 76 76" width="64" height="64" aria-hidden="true">${parts.join('')}</svg>`;
+}
+
+function radar(vals){
+  const W=320,H=290,cx=160,cy=150,R=100,N=CATS.length;
+  const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/N;return[cx+Math.cos(a)*R*v/100,cy+Math.sin(a)*R*v/100]};
+  let g='';
+  [20,40,60,80,100].forEach(v=>{g+=`<polygon points="${CATS.map((c,i)=>pt(i,v).join(',')).join(' ')}" fill="none" stroke="var(--line)" stroke-width="1"/>`});
+  CATS.forEach((c,i)=>{const[x,y]=pt(i,100);g+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--line)"/>`});
+  [50,100].forEach(v=>{g+=`<text x="${cx+4}" y="${cy-R*v/100+12}" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`});
+  g+=`<polygon points="${CATS.map((c,i)=>pt(i,vals[c.k]).join(',')).join(' ')}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  CATS.forEach((c,i)=>{const[x,y]=pt(i,vals[c.k]);g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="var(--c-${c.k})"/>`;
+    const[lx,ly]=pt(i,124);const anchor=Math.abs(lx-cx)<8?'middle':lx>cx?'start':'end';
+    g+=`<text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="14" fill="var(--ink)" font-family="Do Hyeon,sans-serif">${c.n} <tspan font-family="IBM Plex Mono,monospace" font-size="12" fill="var(--c-${c.k})">${vals[c.k]}</tspan></text>`});
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="분야별 능력치 오각형 그래프">${g}</svg>`;
+}
+
+/* ---------- 나 레벨 · 해금 · 퀘스트 · 업적 ---------- */
+/* 나 레벨: 활동·공부로 얻은 플러스 경험치와 퀘스트·업적 보상이 쌓인 값. 능력치와 달리 차감되지 않음 */
+const PL_NEED=l=>30+15*l;
+function plFromXP(x){let l=1;while(x>=PL_NEED(l)){x-=PL_NEED(l);l++}return {lvl:l,xp:x,need:PL_NEED(l)}}
+const UNLOCKS=[
+ {lv:2,k:'title',n:'칭호 달기',d:'이름 옆에 모은 칭호를 달 수 있어요'},
+ {lv:3,k:'slot1',n:'나만의 활동 1칸',d:'직접 만든 활동을 하나 추가할 수 있어요'},
+ {lv:5,k:'weekly',n:'주간 퀘스트',d:'매주 월요일에 큰 퀘스트 3개가 나와요'},
+ {lv:7,k:'graph',n:'30일 성장 그래프',d:'기록 탭에서 분야별 변화를 그래프로 봐요'},
+ {lv:10,k:'skin1',n:'색 테마: 바다·노을',d:'설정에서 앱 색을 바꿀 수 있어요'},
+ {lv:12,k:'slot2',n:'나만의 활동 2칸',d:'직접 만든 활동을 하나 더 추가할 수 있어요'},
+ {lv:15,k:'pot',n:'캐릭터 꾸미기',d:'새싹을 화분·유리병·구름에 심을 수 있어요'},
+ {lv:20,k:'slot3',n:'나만의 활동 3칸 · 테마: 밤하늘',d:'활동 한 칸과 밤하늘 테마가 열려요'},
+];
+const has=(P,k)=>UNLOCKS.some(u=>u.k===k&&P.pl.lvl>=u.lv)||(k==='skin2'&&P.pl.lvl>=20);
+const slots=P=>P.pl.lvl>=20?3:P.pl.lvl>=12?2:P.pl.lvl>=3?1:0;
+const nextUnlock=P=>UNLOCKS.find(u=>u.lv>P.pl.lvl);
+const PL_TITLES=[[2,'도전자'],[10,'꾸준한 사람'],[20,'자기계발러'],[30,'인생 공략러']];
+
+/* 공부 시간(분): 과목 외 공부 + 공부 목록의 시간 단계 */
+const ACT_MIN={study30:30,study:60,study120:120,study180:180};
+const S_MIN={review:30,study:30,t60:60,t120:120,t180:180};
+function studyMin(d,st){
+  let m=0;(st.logs[d]||[]).forEach(id=>m+=ACT_MIN[id]||0);
+  const sl=(st.slogs||{})[d]||{};
+  for(const id in sl){const s=(st.studies||[]).find(z=>z.id===id);if(!s)continue;let best=0;
+    sl[id].forEach(k=>{const a=sAct(s,k);if(a&&a[3]==='time')best=Math.max(best,S_MIN[k]||0)});m+=best}
+  return m;
+}
+const anyOf=ids=>(d,st)=>(st.logs[d]||[]).some(id=>ids.includes(id));
+const countOf=(log,ids)=>log.filter(id=>ids.includes(id)).length;
+const CARDIO=['cardio','cardio60','cardio120','adv_endur'],STRENGTH=['upperw','upperw40','lowerw','lowerw40','fullw','adv_upper','adv_lower'];
+const badIds=st=>new Set(st.acts.filter(a=>a.bad).map(a=>a.id));
+const isCleanDay=(d,st)=>{const l=st.logs[d]||[];const b=badIds(st);return l.length>0&&!l.some(id=>b.has(id))};
+
+/* 일간 퀘스트. easy는 매일 하나씩 들어가는 쉬운 퀘스트 */
+const DQ=[
+ {id:'cond',t:'컨디션 4가지 모두 기록하기',easy:1,c:(d,st)=>{const c=(st.cond||{})[d];return !!c&&COND.every(q=>c[q.k]!=null)}},
+ {id:'meals',t:'세 끼 제때 먹기',easy:1,sub:'care',c:anyOf(['meals','adv_care'])},
+ {id:'planday',t:'하루 계획 세우기',easy:1,sub:'plan',c:anyOf(['planday','adv_plan'])},
+ {id:'reach',t:'먼저 연락·안부 묻기',easy:1,sub:'close',c:anyOf(['reachout'])},
+ {id:'study1',t:'공부 합쳐서 1시간 이상',sub:'know',c:(d,st)=>studyMin(d,st)>=60},
+ {id:'study2',t:'공부 합쳐서 2시간 이상',sub:'know',c:(d,st)=>studyMin(d,st)>=120},
+ {id:'cardio',t:'유산소 30분 이상',sub:'endur',c:anyOf(CARDIO)},
+ {id:'walk',t:'1시간 걷기 또는 1만 보',sub:'endur',c:anyOf(['walk'])},
+ {id:'upper',t:'상체 근력 운동',sub:'upper',c:anyOf(['upperw','upperw40','fullw','adv_upper'])},
+ {id:'lower',t:'하체 근력 운동',sub:'lower',c:anyOf(['lowerw','lowerw40','fullw','adv_lower'])},
+ {id:'deep',t:'폰 없이 1시간 이상 몰입',sub:'focus',c:anyOf(['deep60','deep','deep180','adv_focus'])},
+ {id:'read',t:'독서 30분 이상',sub:'know',c:anyOf(['read','read60','read120'])},
+ {id:'write',t:'글쓰기 30분 이상',sub:'expr',c:anyOf(['write','write60','adv_expr'])},
+ {id:'meditate',t:'명상·호흡 10분',sub:'calm',c:anyOf(['meditate','adv_calm'])},
+ {id:'journal',t:'감사·회고 일기 쓰기',sub:'resil',c:anyOf(['journal'])},
+ {id:'hard',t:'하기 싫은 일 하나 끝까지 하기',sub:'grit',c:anyOf(['hardtask','adv_grit'])},
+ {id:'talk',t:'가족·친구와 깊은 대화',sub:'close',c:anyOf(['deeptalk','adv_close'])},
+ {id:'speak',t:'모임·수업에서 의견 말하기',sub:'talk',c:anyOf(['speakup','newppl','adv_talk'])},
+ {id:'tidy',t:'방·책상 정리',sub:'tidy',c:anyOf(['tidyroom','adv_tidy'])},
+ {id:'chores',t:'집안일 하나 하기',sub:'tidy',c:anyOf(['chores'])},
+ {id:'sleep',t:'정해진 시간에 자고 일어나기',sub:'care',c:anyOf(['sleeptime'])},
+ {id:'plandone',t:'계획한 일 80% 이상 해내기',sub:'plan',c:anyOf(['plandone','adv_plan'])},
+ {id:'clean',t:'해버린 일 없이 하루 마치기',late:1,c:(d,st)=>d<todayStr()&&isCleanDay(d,st)},
+];
+const DQB=Object.fromEntries(DQ.map(q=>[q.id,q]));
+const DQ_XP=10, DQ_BONUS=10, WQ_XP=40;
+
+/* 주간 퀘스트 (월~일) */
+const weekKey=d=>{const t=toDate(d);return addDays(d,-((t.getDay()+6)%7))};
+const weekDays=wk=>Array.from({length:7},(_,i)=>addDays(wk,i)).filter(x=>x<=todayStr());
+const daysWith=(wk,st,f)=>weekDays(wk).filter(d=>f(d,st)).length;
+const timesOf=ids=>(wk,st)=>weekDays(wk).reduce((n,d)=>n+countOf(st.logs[d]||[],ids),0);
+const hm=v=>`${Math.floor(v/60)}시간${v%60?' '+v%60+'분':''}`;
+const WQ=[
+ {id:'w_ex4',t:'운동한 날 4일',n:4,u:'일',cat:'body',v:(wk,st)=>daysWith(wk,st,(d,st)=>(st.logs[d]||[]).some(id=>{const a=st.acts.find(x=>x.id===id);return a&&!a.bad&&Object.keys(a.fx).some(k=>catOf(k)==='body'&&a.fx[k]>0)}))},
+ {id:'w_st10',t:'공부 총 10시간',n:600,cat:'intel',fmt:hm,v:(wk,st)=>weekDays(wk).reduce((m,d)=>m+studyMin(d,st),0)},
+ {id:'w_st6',t:'공부 총 6시간',n:360,cat:'intel',fmt:hm,v:(wk,st)=>weekDays(wk).reduce((m,d)=>m+studyMin(d,st),0)},
+ {id:'w_read3',t:'독서한 날 3일',n:3,u:'일',cat:'intel',v:(wk,st)=>daysWith(wk,st,anyOf(['read','read60','read120']))},
+ {id:'w_med3',t:'명상 3번',n:3,u:'번',cat:'mind',v:timesOf(['meditate','adv_calm'])},
+ {id:'w_hard3',t:'하기 싫은 일 끝내기 3번',n:3,u:'번',cat:'mind',v:timesOf(['hardtask','adv_grit'])},
+ {id:'w_journal3',t:'회고 일기 3번',n:3,u:'번',cat:'mind',v:timesOf(['journal'])},
+ {id:'w_talk2',t:'깊은 대화 2번',n:2,u:'번',cat:'social',v:timesOf(['deeptalk','adv_close'])},
+ {id:'w_new1',t:'새로운 사람과 대화 1번',n:1,u:'번',cat:'social',v:timesOf(['newppl','adv_talk'])},
+ {id:'w_speak2',t:'의견 말하기 2번',n:2,u:'번',cat:'social',v:timesOf(['speakup'])},
+ {id:'w_tidy3',t:'정리·집안일 3번',n:3,u:'번',cat:'life',v:timesOf(['tidyroom','chores','adv_tidy'])},
+ {id:'w_sleep4',t:'정해진 시간에 자고 일어나기 4일',n:4,u:'일',cat:'life',v:(wk,st)=>daysWith(wk,st,anyOf(['sleeptime']))},
+ {id:'w_clean4',t:'해버린 일 없는 날 4일',n:4,u:'일',cat:'life',v:(wk,st)=>daysWith(wk,st,(d,st)=>d<todayStr()&&isCleanDay(d,st))},
+ {id:'w_log6',t:'기록한 날 6일',n:6,u:'일',v:(wk,st)=>daysWith(wk,st,(d,st)=>(st.logs[d]||[]).length||(st.cond||{})[d]||Object.keys((st.slogs||{})[d]||{}).length)},
+ {id:'w_dq10',t:'일간 퀘스트 10개 완료',n:10,u:'개',v:(wk,st,dq)=>weekDays(wk).reduce((n,d)=>n+((dq||{})[d]||[]).length,0)},
+ {id:'w_meas',t:'승급 측정 1번 기록',n:1,u:'번',v:(wk,st)=>(st.tests||[]).filter(t=>t.date>=wk&&t.date<=addDays(wk,6)).length},
+];
+const WQB=Object.fromEntries(WQ.map(q=>[q.id,q]));
+
+/* 날짜로 정해지는 난수: 같은 날에는 같은 퀘스트 */
+function rng(seed){let h=1779033703^seed.length;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19}
+  return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);h^=h>>>16;return(h>>>0)/4294967296}}
+function wpick(list,w,r){const tot=list.reduce((a,x)=>a+w(x),0);let t=r()*tot;for(const x of list){t-=w(x);if(t<=0)return x}return list[list.length-1]}
+function pickDaily(d,cur,exclude,n,salt){
+  const r=rng('d'+d+(salt||''));const out=[],used=new Set();
+  const w=q=>1+Math.max(0,70-(q.sub&&cur[q.sub]?cur[q.sub].lvl:50))/15;   // 약한 능력일수록 자주
+  const pool=DQ.filter(q=>!(exclude||[]).includes(q.id));
+  if(n===3){const e=wpick(pool.filter(q=>q.easy),w,r);out.push(e.id);if(e.sub)used.add(e.sub)}
+  while(out.length<n){const c=pool.filter(q=>!q.easy&&!out.includes(q.id)&&!(q.sub&&used.has(q.sub)));if(!c.length)break;
+    const q=wpick(c,w,r);out.push(q.id);if(q.sub)used.add(q.sub)}
+  return out;
+}
+function pickWeekly(wk,cur){
+  const r=rng('w'+wk);const cl=catLevels(cur);const out=[],used=new Set();
+  const w=q=>q.cat?1+Math.max(0,70-cl[q.cat])/15:1.2;
+  while(out.length<3){const c=WQ.filter(q=>!out.includes(q.id)&&!used.has(q.cat||'meta'));if(!c.length)break;
+    const q=wpick(c,w,r);out.push(q.id);used.add(q.cat||'meta')}
+  return out;
+}
+function ensureQuests(R,P){
+  const t=todayStr();let changed=false;
+  if(!state.quests)state.quests={d:{},w:{}};
+  if(!state.quests.d[t]){state.quests.d[t]={ids:pickDaily(t,R.cur,[],3),rr:false};changed=true}
+  if(has(P,'weekly')){const wk=weekKey(t);if(!state.quests.w[wk]){state.quests.w[wk]={ids:pickWeekly(wk,R.cur)};changed=true}}
+  return changed;
+}
+
+/* 업적. tier: 0 브론즈 · 1 실버 · 2 골드 · 3 전설 */
+const ACH=[
+ {id:'first',n:'첫걸음',d:'처음으로 하루를 기록하기',tier:0,ic:'sprout',p:S=>[S.logDays,1]},
+ {id:'streak3',n:'작심삼일 돌파',d:'3일 연속 기록하기',tier:0,ic:'flame',num:3,p:S=>[S.streak,3]},
+ {id:'up',n:'첫 성장',d:'아무 능력이나 레벨업하기',tier:0,ic:'arrow',p:S=>[S.ups,1]},
+ {id:'studyadd',n:'배움의 시작',d:'공부 목록에 첫 공부 추가하기',tier:0,ic:'book',p:S=>[S.studiesAdded,1]},
+ {id:'dq_all',n:'퀘스트 올클리어',d:'하루 일간 퀘스트 3개 모두 완료',tier:0,ic:'scroll',p:S=>[S.dqAllDays,1]},
+ {id:'dqs3',n:'올클 3연속',d:'3일 연속 일간 퀘스트 모두 완료',tier:0,ic:'scroll',num:3,title:'퀘스트 러너',p:S=>[S.dqStreak,3]},
+ {id:'med10',n:'고요한 마음',d:'명상 10번',tier:0,ic:'moon',title:'고요한 사람',p:S=>[S.med,10]},
+ {id:'tidy15',n:'정리의 달인',d:'정리·집안일 15번',tier:0,ic:'sparkle',title:'정리왕',p:S=>[S.tidy,15]},
+ {id:'streak7',n:'일주일 개근',d:'7일 연속 기록하기',tier:1,ic:'flame',num:7,title:'개근생',p:S=>[S.streak,7]},
+ {id:'streak10',n:'열흘의 불꽃',d:'10일 연속 기록하기',tier:1,ic:'flame',num:10,title:'열흘의 끈기',p:S=>[S.streak,10]},
+ {id:'streak14',n:'2주 개근',d:'14일 연속 기록하기',tier:1,ic:'flame',num:14,p:S=>[S.streak,14]},
+ {id:'dqs7',n:'올클 7연속',d:'7일 연속 일간 퀘스트 모두 완료',tier:1,ic:'scroll',num:7,title:'퀘스트 헌터',p:S=>[S.dqStreak,7]},
+ {id:'gate',n:'관문 돌파',d:'승급 시험을 통과해 10레벨 단위 넘기',tier:1,ic:'flag',title:'관문 돌파자',p:S=>[S.gates,1]},
+ {id:'all30',n:'균형 잡힌 사람',d:'다섯 분야 모두 Lv 30',tier:1,ic:'scale',title:'균형 잡힌',p:S=>[S.minCat,30]},
+ {id:'cardio20',n:'달리는 사람',d:'유산소 20번',tier:1,ic:'bolt',title:'러너',p:S=>[S.cardio,20]},
+ {id:'str20',n:'쇠질의 시작',d:'근력 운동 20번',tier:1,ic:'dumbbell',title:'근력 루키',p:S=>[S.strength,20]},
+ {id:'social10',n:'연결된 사람',d:'깊은 대화·새로운 사람·의견 말하기 합쳐 10번',tier:1,ic:'chat',title:'분위기 메이커',p:S=>[S.social,10]},
+ {id:'sleep14',n:'규칙의 힘',d:'정해진 시간에 자고 일어나기 14번',tier:1,ic:'clock',title:'아침형 인간',p:S=>[S.sleep,14]},
+ {id:'meas5',n:'숫자로 증명',d:'승급 측정 5번 기록',tier:1,ic:'ruler',title:'증명하는 사람',p:S=>[S.tests,5]},
+ {id:'streak20',n:'스무날의 불꽃',d:'20일 연속 기록하기',tier:2,ic:'flame',num:20,title:'스무날 개근',p:S=>[S.streak,20]},
+ {id:'streak30',n:'한 달 개근',d:'30일 연속 기록하기',tier:2,ic:'flame',num:30,title:'불꽃 개근왕',p:S=>[S.streak,30]},
+ {id:'streak50',n:'오십일의 불꽃',d:'50일 연속 기록하기',tier:2,ic:'flame',num:50,title:'반백 개근',p:S=>[S.streak,50]},
+ {id:'dqs14',n:'올클 14연속',d:'14일 연속 일간 퀘스트 모두 완료',tier:2,ic:'scroll',num:14,title:'퀘스트 마스터',p:S=>[S.dqStreak,14]},
+ {id:'all50',n:'만능형 인간',d:'다섯 분야 모두 Lv 50',tier:2,ic:'scale',title:'만능형 인간',p:S=>[S.minCat,50]},
+ {id:'any60',n:'한 우물',d:'세부 능력 하나를 Lv 60까지',tier:2,ic:'peak',title:'한 우물 장인',p:S=>[S.maxSub,60]},
+ {id:'any80',n:'고수의 길',d:'세부 능력 하나를 Lv 80까지',tier:2,ic:'peak',title:'고수',p:S=>[S.maxSub,80]},
+ {id:'study300',n:'삼백 시간의 공부',d:'공부 누적 300시간',tier:2,ic:'book',num:300,title:'성실한 학도',p:S=>[Math.floor(S.studyMin/60),300]},
+ {id:'study3',n:'공부벌레',d:'하루 3시간 이상 공부 10번',tier:2,ic:'book',title:'공부벌레',p:S=>[S.study3,10]},
+ {id:'clean7',n:'무결점 주간',d:'해버린 일 없이 7일 연속 기록',tier:2,ic:'gem',title:'무결점',p:S=>[S.cleanStreak,7]},
+ {id:'days100',n:'백 일의 기록',d:'기록한 날 누적 100일 (연속이 아니어도 돼요)',tier:2,ic:'clock',num:100,title:'기록하는 사람',p:S=>[S.logDays,100]},
+ {id:'dq50',n:'퀘스트 장인',d:'일간 퀘스트 50개 완료',tier:2,ic:'scroll',title:'퀘스트 장인',p:S=>[S.dqDone,50]},
+ {id:'wq_all',n:'주간 정복자',d:'한 주의 주간 퀘스트 3개 모두 완료',tier:2,ic:'trophy',title:'주간 정복자',p:S=>[S.wqAll,1]},
+ {id:'streak100',n:'백일의 기적',d:'100일 연속 기록하기',tier:3,ic:'flame',num:100,title:'백일의 전설',p:S=>[S.streak,100]},
+ {id:'streak200',n:'이백일의 불꽃',d:'200일 연속 기록하기',tier:3,ic:'flame',num:200,title:'불멸의 개근',p:S=>[S.streak,200]},
+ {id:'streak365',n:'1년의 기적',d:'365일 연속 기록하기',tier:3,ic:'flame',num:365,title:'살아있는 전설',p:S=>[S.streak,365]},
+ {id:'dqs30',n:'올클 30연속',d:'30일 연속 일간 퀘스트 모두 완료',tier:3,ic:'scroll',num:30,title:'퀘스트의 신',p:S=>[S.dqStreak,30]},
+ {id:'any90',n:'경지에 오르다',d:'세부 능력 하나를 Lv 90까지',tier:3,ic:'crown',title:'경지에 오른 자',p:S=>[S.maxSub,90]},
+ {id:'study1000',n:'천 시간의 학자',d:'공부 누적 1000시간',tier:3,ic:'book',num:1000,title:'천 시간의 학자',p:S=>[Math.floor(S.studyMin/60),1000]},
+ {id:'days365',n:'1년의 기록',d:'기록한 날 누적 365일',tier:3,ic:'clock',num:365,title:'기록의 장인',p:S=>[S.logDays,365]},
+];
+const ACH_XP=[20,50,100,200], TIER_N=['브론즈','실버','골드','전설'];
+
+function progress(st,R){
+  const acts=Object.fromEntries(st.acts.map(a=>[a.id,a]));const bad=badIds(st);const today=todayStr();
+  const S={dqStreak:0,logDays:0,streak:0,ups:0,gates:0,minCat:0,maxSub:0,study3:0,studyMin:0,studiesAdded:0,cardio:0,strength:0,med:0,social:0,tidy:0,sleep:0,cleanStreak:0,dqAllDays:0,dqDone:0,wqAll:0,tests:0};
+  let xp=0,wqDone=0;const ach={},dq={},wq={},frozen={};const Q=st.quests||{d:{},w:{}};
+  const fz=(st.buys||[]).filter(b=>b.id==='freeze').map(b=>b.date).sort();let fzi=0,fzHave=0;
+  R.days.forEach(day=>{
+    const d=day.d,log=st.logs[d]||[];
+    while(fzi<fz.length&&fz[fzi]<=d){fzHave++;fzi++}
+    log.forEach(id=>{const a=acts[id];if(a)for(const k in a.fx)if(a.fx[k]>0)xp+=a.fx[k]});
+    const sl=(st.slogs||{})[d]||{};
+    for(const id in sl){const s=(st.studies||[]).find(z=>z.id===id);if(s)sl[id].forEach(k=>{const a=sAct(s,k);if(a)xp+=a[2]})}
+    // 빼먹은 날: 보호권이 있으면 자동으로 쓰여서 연속 기록 유지 (능력치 차감은 그대로)
+    if(day.kind==='log'){S.logDays++;S.streak++}else if(d<today){if(fzHave>0&&S.streak>0){fzHave--;frozen[d]=1}else S.streak=0}
+    if(day.kind==='log'&&isCleanDay(d,st))S.cleanStreak++;else if(d<today||log.some(id=>bad.has(id)))S.cleanStreak=0;
+    [...day.ev,...(day.sev||[])].forEach(e=>{if(e.to>e.from){S.ups++;if(Math.floor(e.to/10)>Math.floor(e.from/10))S.gates++}});
+    const lv=day.snap;S.minCat=Math.min(...CATS.map(c=>catLv(lv,c)));S.maxSub=Math.max(...SUBS.map(s=>lv[s.k]));
+    const m=studyMin(d,st);S.studyMin+=m;if(m>=180)S.study3++;
+    S.studiesAdded=(st.studies||[]).filter(s=>s.start<=d).length;
+    if(countOf(log,CARDIO))S.cardio++;if(countOf(log,STRENGTH))S.strength++;
+    S.med+=countOf(log,['meditate','adv_calm']);S.social+=countOf(log,['deeptalk','newppl','speakup','adv_close','adv_talk']);
+    S.tidy+=countOf(log,['tidyroom','chores','adv_tidy']);S.sleep+=countOf(log,['sleeptime']);
+    S.tests=(st.tests||[]).filter(t=>t.date<=d).length;
+    const q=Q.d[d];
+    if(q){const done=q.ids.filter(id=>DQB[id]&&DQB[id].c(d,st));dq[d]=done;xp+=DQ_XP*done.length;S.dqDone+=done.length;
+      if(q.ids.length===3&&done.length===3){xp+=DQ_BONUS;S.dqAllDays++;S.dqStreak++}else if(d<today)S.dqStreak=0}
+    else if(d<today)S.dqStreak=0;
+    if(toDate(d).getDay()===0||d===today){const wk=weekKey(d),w=Q.w[wk];
+      if(w){const done=w.ids.filter(id=>WQB[id]&&WQB[id].v(wk,st,dq)>=WQB[id].n);wq[wk]=done;wqDone+=done.length;xp+=WQ_XP*done.length;if(done.length===3)S.wqAll++}}
+    ACH.forEach(a=>{if(!ach[a.id]){const[v,n]=a.p(S);if(v>=n){ach[a.id]=d;xp+=ACH_XP[a.tier]}}});
+  });
+  const pl=plFromXP(xp);
+  const seedsEarned=SEED_DQ*S.dqDone+SEED_DQ_ALL*S.dqAllDays+SEED_WQ*wqDone+ACH.filter(a=>ach[a.id]).reduce((n,a)=>n+SEED_ACH[a.tier],0)+SEED_PL*(pl.lvl-1);
+  return {xp,pl,ach,dq,wq,S,frozen,fzHave,seedsEarned};
+}
+function titlesOf(P){return [...PL_TITLES.filter(t=>P.pl.lvl>=t[0]).map(t=>t[1]),...ACH.filter(a=>P.ach[a.id]&&a.title).map(a=>a.title)]}
+
+/* ---------- 배지 그림 ---------- */
+const METAL=[['#F6C08F','#C27838','#7A3F14'],['#FFFFFF','#C7D1D8','#7A8893'],['#FFF4B8','#F0C02F','#A96F07'],['#8DF3FF','#B38CFF','#FF86D0']];
+const DISC=[['#8A4A1C','#4E260B'],['#5E6C77','#2F3940'],['#B57A0C','#6B4300'],['#5B3FD0','#2A1A6E']];
+const RIBBON=['#2F7D5B','#2F62C4','#B23A48','#6B3FD0'];
+const ICONS={
+ sprout:'<path d="M50 70V46" stroke-width="5"/><path d="M50 50C40 50 33 44 32 34C42 34 49 40 50 50Z" fill="currentColor"/><path d="M50 46C52 37 59 32 68 33C67 42 60 47 50 46Z" fill="currentColor"/>',
+ arrow:'<path d="M50 70V32M34 47L50 31L66 47" stroke-width="7"/>',
+ book:'<path d="M50 38C43 33 35 33 28 35V66C35 64 43 64 50 69C57 64 65 64 72 66V35C65 33 57 33 50 38Z" stroke-width="5"/><path d="M50 38V69" stroke-width="4"/>',
+ scroll:'<path d="M36 30H64V64C64 68 61 70 58 70H34C38 70 40 68 40 64V34C40 32 38 30 36 30C33 30 31 32 31 35V40H40" stroke-width="5"/><path d="M47 42H58M47 50H58M47 58H55" stroke-width="4"/>',
+ moon:'<path d="M60 30A21 21 0 1 0 70 62A17 17 0 1 1 60 30Z" fill="currentColor" stroke="none"/>',
+ sparkle:'<path d="M50 28L55 45L72 50L55 55L50 72L45 55L28 50L45 45Z" fill="currentColor" stroke="none"/>',
+ flame:'<path d="M50 28C59 39 66 46 65 57C64 66 57 72 50 72C42 72 35 66 35 57C35 49 40 45 43 38C45 45 48 47 51 45C53 39 52 34 50 28Z" fill="currentColor" stroke="none"/>',
+ flag:'<path d="M38 72V28" stroke-width="5"/><path d="M38 30H66L58 41L66 52H38Z" fill="currentColor" stroke-width="3"/>',
+ scale:'<path d="M50 30V70M38 70H62M30 38H70" stroke-width="5"/><path d="M30 38L23 54H37ZM70 38L63 54H77Z" fill="currentColor" stroke-width="3"/>',
+ bolt:'<path d="M55 26L36 54H50L45 74L65 44H51Z" fill="currentColor" stroke-width="2"/>',
+ dumbbell:'<path d="M34 40V60M66 40V60M27 45V55M73 45V55M34 50H66" stroke-width="7"/>',
+ chat:'<path d="M28 32H62C65 32 67 34 67 37V52C67 55 65 57 62 57H45L35 66V57H28C25 57 23 55 23 52V37C23 34 25 32 28 32Z" fill="currentColor" stroke="none"/><path d="M71 44H74C76 44 77 45 77 47V60C77 62 76 63 74 63H71V70L63 63H52" stroke-width="4"/>',
+ clock:'<circle cx="50" cy="50" r="20" stroke-width="5"/><path d="M50 50V38M50 50L59 56" stroke-width="5"/>',
+ ruler:'<path d="M28 60L60 28L72 40L40 72Z" stroke-width="5"/><path d="M40 48L45 53M47 41L52 46M54 34L59 39" stroke-width="4"/>',
+ gem:'<path d="M34 42L43 30H57L66 42L50 72Z" fill="currentColor" stroke-width="2"/><path d="M34 42H66M43 30L50 42L57 30M50 42V72" stroke-width="2" stroke="#00000055"/>',
+ trophy:'<path d="M38 30H62V42C62 52 56 57 50 57C44 57 38 52 38 42Z" fill="currentColor" stroke-width="2"/><path d="M38 34H31C31 43 35 46 39 46M62 34H69C69 43 65 46 61 46M50 57V65M41 70H59" stroke-width="5"/>',
+ peak:'<path d="M24 68L42 38L51 51L58 42L76 68Z" fill="currentColor" stroke="none"/><path d="M58 42V28L68 32L58 35" stroke-width="3"/>',
+ crown:'<path d="M28 64L32 36L43 50L50 32L57 50L68 36L72 64Z" fill="currentColor" stroke-width="2"/><path d="M28 70H72" stroke-width="5"/>',
+};
+function starPts(n,ro,ri){const p=[];for(let i=0;i<n*2;i++){const r=i%2?ri:ro,a=Math.PI*i/n-Math.PI/2;p.push((50+r*Math.cos(a)).toFixed(1)+','+(50+r*Math.sin(a)).toFixed(1))}return p.join(' ')}
+function badgeSVG(a,locked,uid){
+  const t=a.tier,g='g'+uid;
+  const m=locked?['#D3D9D7','#A3ADAB','#727D7B']:METAL[t],dc=locked?['#8E9896','#646E6C']:DISC[t],rb=locked?'#A3ADAB':RIBBON[t];
+  let s=`<svg viewBox="-12 -12 124 124" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+   <linearGradient id="${g}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${m[0]}"/><stop offset=".55" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></linearGradient>
+   <radialGradient id="${g}d" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="${dc[0]}"/><stop offset="1" stop-color="${dc[1]}"/></radialGradient></defs>`;
+  if(t<=1)s+=`<path d="M36 70L27 104L38 97L44 108L52 76Z" fill="${rb}"/><path d="M64 70L73 104L62 97L56 108L48 76Z" fill="${rb}" opacity=".85"/>`;
+  if(t>=2)s+=`<polygon points="${starPts(16,56,44)}" fill="url(#${g}m)" opacity=".9"/>`;
+  if(t===3){const wing='M20 52C4 46-8 30-10 14C0 24 10 27 18 28C6 31 0 39-3 46C7 44 14 46 20 52Z';
+    s+=`<path d="${wing}" fill="url(#${g}m)"/><path d="${wing}" fill="url(#${g}m)" transform="translate(100 0) scale(-1 1)"/>`}
+  if(t===1)s+=`<polygon points="50,12 84,31 84,69 50,88 16,69 16,31" fill="url(#${g}m)" stroke="${m[2]}" stroke-width="2"/>`;
+  else s+=`<circle cx="50" cy="50" r="${t===0?36:34}" fill="url(#${g}m)" stroke="${m[2]}" stroke-width="2"/>`;
+  s+=`<circle cx="50" cy="50" r="26" fill="url(#${g}d)"/><path d="M30 40A24 24 0 0 1 60 27" stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  if(t===3)s+=`<path d="M37 18L41 4L50 12L59 4L63 18Z" fill="url(#${g}m)" stroke="${m[2]}" stroke-width="1.5"/>`
+    +[[8,8,5],[94,14,4],[88,92,5],[10,86,4]].map(([x,y,r])=>`<path d="M${x} ${y-r}L${x+r*.3} ${y-r*.3}L${x+r} ${y}L${x+r*.3} ${y+r*.3}L${x} ${y+r}L${x-r*.3} ${y+r*.3}L${x-r} ${y}L${x-r*.3} ${y-r*.3}Z" fill="#fff"/>`).join('');
+  s+=locked&&a.num?`<text x="50" y="${a.num>=100?60:62}" text-anchor="middle" font-size="${a.num>=1000?14:a.num>=100?18:24}" font-weight="800" fill="#E6EAE9" font-family="IBM Plex Mono,ui-monospace,monospace">${a.num}</text>`
+    :locked?`<text x="50" y="61" text-anchor="middle" font-size="30" font-weight="700" fill="#E6EAE9" font-family="system-ui,sans-serif">?</text>`
+    :a.num?`<g transform="translate(50 39) scale(.36) translate(-50 -50)" color="#FFF6E2" stroke="#FFF6E2" fill="none" stroke-linecap="round" stroke-linejoin="round">${ICONS[a.ic]||''}</g><text x="50" y="${a.num>=100?67:69}" text-anchor="middle" font-size="${a.num>=1000?13:a.num>=100?17:21}" font-weight="800" fill="#FFF6E2" font-family="IBM Plex Mono,ui-monospace,monospace">${a.num}</text>`
+    :`<g transform="translate(50 50) scale(.62) translate(-50 -50)" color="#FFF6E2" stroke="#FFF6E2" fill="none" stroke-linecap="round" stroke-linejoin="round">${ICONS[a.ic]||''}</g>`;
+  return s+'</svg>';
+}
+
+/* ---------- 달성 연출 ---------- */
+let celebQ=[],celebOpen=false;
+function checkCelebrations(P){
+  if(!state.seen)state.seen={ach:[],pl:1};
+  const newA=ACH.filter(a=>P.ach[a.id]&&!state.seen.ach.includes(a.id));
+  const plUp=P.pl.lvl>state.seen.pl;
+  if(!newA.length&&!plUp)return;
+  newA.forEach(a=>celebQ.push({type:'ach',a}));
+  if(plUp)celebQ.push({type:'pl',from:state.seen.pl,to:P.pl.lvl});
+  state.seen={ach:[...state.seen.ach,...newA.map(a=>a.id)],pl:Math.max(state.seen.pl,P.pl.lvl)};save();
+  if(!celebOpen)showNextCeleb();
+}
+function celebEl(){let el=document.getElementById('celebrate');if(!el){el=document.createElement('div');el.id='celebrate';el.className='celeb';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}return el}
+function showModal(html){const el=celebEl();el.innerHTML=html;el.hidden=false;celebOpen=true;const b=el.querySelector('.btn');if(b)b.focus({preventScroll:true})}
+function closeModal(){const el=celebEl();el.hidden=true;el.innerHTML='';celebOpen=false}
+function showNextCeleb(){
+  const c=celebQ.shift();if(!c){closeModal();return}
+  const more=celebQ.length?`다음 (${celebQ.length})`:'좋아요';
+  let h;
+  if(c.type==='ach'){const a=c.a;
+    h=`<div class="cbox t${a.tier}"><div class="rays" aria-hidden="true"></div><div class="spark s1"></div><div class="spark s2"></div><div class="spark s3"></div>
+      <div class="cbadge">${badgeSVG(a,false,'cb'+a.id)}</div><div class="ctier">${TIER_N[a.tier]} 업적 달성</div><h2>${a.n}</h2><p>${a.d}</p>
+      <div class="crew">나 경험치 <b class="num">+${ACH_XP[a.tier]}</b> · ${seedTag(SEED_ACH[a.tier])}${a.title?` · 칭호 「${a.title}」`:''}</div><button type="button" class="btn" data-cnext>${more}</button></div>`}
+  else{const opened=UNLOCKS.filter(u=>u.lv>c.from&&u.lv<=c.to),nu=UNLOCKS.find(u=>u.lv>c.to),nt=PL_TITLES.filter(t=>t[0]>c.from&&t[0]<=c.to);
+    h=`<div class="cbox t1"><div class="rays" aria-hidden="true"></div><div class="ctier">나 레벨 업</div><div class="plbig num">Lv ${c.to}</div><div class="crew">${seedTag(SEED_PL*(c.to-c.from))}</div>
+      ${opened.length?`<div class="unlist">${opened.map(u=>`<div><b>해금</b> ${u.n}<span>${u.d}</span></div>`).join('')}</div>`:''}
+      ${nt.length?`<div class="crew">칭호 ${nt.map(t=>`「${t[1]}」`).join(' ')}</div>`:''}
+      ${nu?`<p>다음 해금: 나 Lv ${nu.lv} · ${nu.n}</p>`:''}<button type="button" class="btn" data-cnext>${more}</button></div>`}
+  showModal(h);
+  celebEl().querySelector('[data-cnext]').onclick=showNextCeleb;
+}
+function showAchInfo(a,P){
+  const got=P.ach[a.id],[v,n]=a.p(P.S);
+  showModal(`<div class="cbox t${got?a.tier:'x'} still"><div class="cbadge sm">${badgeSVG(a,!got,'ci'+a.id)}</div><div class="ctier">${TIER_N[a.tier]} 업적</div><h2>${a.n}</h2><p>${a.d}</p>
+    ${got?`<div class="crew">${fmtDay(got)} 달성 · 나 경험치 +${ACH_XP[a.tier]}${a.title?` · 칭호 「${a.title}」`:''}</div>`
+      :`<div class="aprog"><i style="width:${Math.min(100,Math.round(v/n*100))}%"></i></div><div class="crew num">${Math.min(v,n)} / ${n}${a.title?` · 달성하면 칭호 「${a.title}」`:''}</div>`}
+    <button type="button" class="btn" data-cclose>닫기</button></div>`);
+  celebEl().querySelector('[data-cclose]').onclick=closeModal;
+}
+function showTitlePicker(P){
+  const ts=titlesOf(P);
+  showModal(`<div class="cbox still"><h2>칭호 고르기</h2><p>모은 칭호 ${ts.length}개 · 업적과 나 레벨로 늘어나요</p>
+    <div class="tlist">${ts.map(t=>`<button type="button" class="tpick${state.title===t?' on':''}" data-tpick="${esc(t)}">「${esc(t)}」</button>`).join('')}
+    <button type="button" class="tpick${!state.title?' on':''}" data-tpick="">칭호 없음</button></div>
+    <button type="button" class="btn ghost" data-cclose>닫기</button></div>`);
+  const el=celebEl();
+  el.querySelectorAll('[data-tpick]').forEach(b=>b.onclick=()=>{state.title=b.dataset.tpick;save();closeModal();render()});
+  el.querySelector('[data-cclose]').onclick=closeModal;
+}
+
+/* ---------- 도전 탭 ---------- */
+function questRows(ids,doneIds,d,canReroll){
+  return ids.map((id,i)=>{const q=DQB[id];if(!q)return '';const done=doneIds.includes(id);
+    return `<div class="qrow${done?' done':''}"><span class="qchk" aria-hidden="true">${done?'✓':''}</span>
+      <div style="min-width:0"><div class="qt">${q.t}</div>${q.late&&!done&&d===todayStr()?'<div class="small muted">오늘이 지나면 확인돼요</div>':''}</div>
+      <span class="qxp num">+${DQ_XP} ${seedTag(SEED_DQ)}</span>${!done&&d===todayStr()?`<button type="button" class="x" data-reroll="${i}">${canReroll?'바꾸기':'바꾸기 '+seedTag(REROLL_COST)}</button>`:''}</div>`}).join('');
+}
+function renderQuest(R,P){
+  const sub=`<div class="seg seg3 qsubs">${[['quest','퀘스트'],['garden','정원·상점'],['ach','업적·해금']].map(([k,n])=>`<button type="button" class="${qsub===k?'on':''}" data-qsub="${k}" aria-pressed="${qsub===k}">${n}</button>`).join('')}</div>`;
+  if(qsub==='garden')return `<section class="panel">${sub}${renderGarden(P)}</section>`;
+  return renderQuestMain(R,P,sub);
+}
+function renderQuestMain(R,P,sub){
+  const t=todayStr(),q=state.quests.d[t]||{ids:[]},done=P.dq[t]||[];
+  const nu=nextUnlock(P);const wk=weekKey(t),w=state.quests.w[wk];
+  const ach=ACH.filter(a=>P.ach[a.id]).length;
+  const showQ=qsub==='quest';
+  return `<section class="panel">${sub}
+    <div class="card plcard"><div class="plhead"><span class="ctier">나 레벨</span><span class="plbig num">Lv ${P.pl.lvl}</span></div>
+      <div class="plbar"><i style="width:${Math.round(P.pl.xp/P.pl.need*100)}%"></i></div>
+      <div class="sub small"><span class="num">${P.pl.xp} / ${P.pl.need}</span><span>${nu?`다음 해금 Lv ${nu.lv} · ${nu.n}`:'모든 해금 완료'}</span></div></div>
+    ${showQ?`<div class="sec-label grp"><span>오늘의 퀘스트</span><span class="num">${done.length}/${q.ids.length}</span></div>
+    <div class="card qcard">${questRows(q.ids,done,t,!q.rr)}
+      <div class="small muted">${done.length===3?`모두 완료! 보너스 +${DQ_BONUS}`:`3개 모두 완료하면 보너스 +${DQ_BONUS}`}${q.rr?` · 무료 바꾸기를 썼어요. 더 바꾸려면 씨앗 ${REROLL_COST}개`:' · 하루 한 번 무료로 바꿀 수 있어요'}</div></div>
+    <div class="sec-label grp"><span>주간 퀘스트</span>${w?`<span class="small">${daysBetween(t,addDays(wk,7))}일 남음</span>`:''}</div>
+    ${has(P,'weekly')&&w?`<div class="card qcard">${w.ids.map(id=>{const x=WQB[id];if(!x)return '';const v=x.v(wk,state,P.dq),ok=v>=x.n;
+        return `<div class="qrow${ok?' done':''}"><span class="qchk" aria-hidden="true">${ok?'✓':''}</span><div style="min-width:0"><div class="qt">${x.t}</div>
+          <div class="aprog"><i style="width:${Math.min(100,Math.round(v/x.n*100))}%"></i></div><div class="small muted num">${x.fmt?x.fmt(Math.min(v,x.n))+' / '+x.fmt(x.n):Math.min(v,x.n)+' / '+x.n+x.u}</div></div>
+          <span class="qxp num">+${WQ_XP} ${seedTag(SEED_WQ)}</span></div>`}).join('')}</div>`
+      :`<div class="note locked">나 Lv 5에 열려요. 매주 월요일에 큰 퀘스트 3개가 나와요.</div>`}`:`
+    <div class="sec-label grp"><span>업적</span><span class="num">${ach}/${ACH.length}</span></div>
+    <div class="achgrid">${ACH.map(a=>{const got=!!P.ach[a.id];return `<button type="button" class="achb${got?' got':''}" data-ach="${a.id}">
+      <span class="ab">${badgeSVG(a,!got,'ag'+a.id)}</span><span class="an">${a.n}</span><span class="at t${a.tier}">${TIER_N[a.tier]}</span></button>`}).join('')}</div>
+    <div class="sec-label">해금</div>
+    <div class="card unl">${UNLOCKS.map(u=>{const ok=P.pl.lvl>=u.lv;return `<div class="urow${ok?' ok':''}"><span class="ulv num">Lv ${u.lv}</span><div style="min-width:0"><div class="un">${u.n}</div><div class="small muted">${u.d}</div></div><span class="pill${ok?'':' neg'}">${ok?'열림':'잠김'}</span></div>`}).join('')}</div>
+    <div class="note">나 레벨은 활동·공부로 얻은 경험치와 퀘스트·업적 보상이 쌓여서 올라요. 능력치와 달리 줄지 않아요.</div>`}
+  </section>`;
+}
+function todayQuestStrip(P){
+  const t=todayStr(),q=state.quests.d[t];if(!q||viewDay!==t)return '';const done=P.dq[t]||[];
+  return `<button type="button" class="qstrip" data-gotab="quest"><span class="qs-h"><b>오늘의 퀘스트</b><span class="num">${done.length}/${q.ids.length}</span></span>
+    <span class="qs-l">${q.ids.map(id=>DQB[id]?`<span class="${done.includes(id)?'qd':''}">${done.includes(id)?'✓ ':''}${DQB[id].t}</span>`:'').join('')}</span></button>`;
+}
+
+/* ---------- 30일 성장 그래프 ---------- */
+function growthChart(R){
+  const days=R.days.slice(-30);if(days.length<2)return `<div class="note">기록이 이틀 이상 쌓이면 그래프가 그려져요.</div>`;
+  const W=320,H=170,L=28,Rt=8,T=10,B=24;
+  const series=CATS.map(c=>({c,v:days.map(x=>catLv(x.snap,c))}));
+  const all=series.flatMap(s=>s.v);let lo=Math.max(0,Math.floor((Math.min(...all)-3)/5)*5),hi=Math.min(100,Math.ceil((Math.max(...all)+3)/5)*5);if(hi-lo<10)hi=lo+10;
+  const x=i=>L+(W-L-Rt)*i/(days.length-1),y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const ticks=[lo,Math.round((lo+hi)/2),hi];
+  let g=ticks.map(v=>`<line x1="${L}" x2="${W-Rt}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`).join('');
+  g+=series.map(s=>`<polyline points="${s.v.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="var(--c-${s.c.k})" stroke-width="2" stroke-linejoin="round"/><circle cx="${x(days.length-1)}" cy="${y(s.v[s.v.length-1])}" r="3" fill="var(--c-${s.c.k})"/>`).join('');
+  const lab=d=>{const t=toDate(d);return `${t.getMonth()+1}/${t.getDate()}`};
+  g+=`<text x="${L}" y="${H-6}" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${lab(days[0].d)}</text><text x="${W-Rt}" y="${H-6}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${lab(days[days.length-1].d)}</text>`;
+  return `<div class="card"><h3>30일 성장</h3><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 30일 분야별 레벨 변화" style="width:100%;height:auto">${g}</svg>
+    <div class="chips">${series.map(s=>`<span class="chip" style="color:var(--c-${s.c.k})">${s.c.n} <b>${s.v[s.v.length-1]}</b></span>`).join('')}</div></div>`;
+}
+
+/* ---------- 꾸미기 ---------- */
+const SKINS=[['','기본',null],['sea','바다','skin1'],['sunset','노을','skin1'],['night','밤하늘','skin2']];
+const POTS=[['','흙'],['pot','토분'],['jar','유리병'],['cloud','구름']];
+function applySkin(){const r=document.documentElement;if(state&&state.skin)r.dataset.skin=state.skin;else delete r.dataset.skin}
+function renderLook(P){
+  const sk=has(P,'skin1'),pt=has(P,'pot');
+  return `<div class="card"><h3>꾸미기</h3>
+    <div><div class="small muted" style="margin-bottom:4px">색 테마${sk?'':' · 나 Lv 10에 열려요'}</div>
+      <div class="seg seg4">${SKINS.map(([k,n,need])=>{const ok=!need||has(P,need);return `<button type="button" class="${(state.skin||'')===k?'on':''}" data-skin="${k}" ${ok?'':'disabled'} aria-pressed="${(state.skin||'')===k}">${n}${ok?'':' · 잠김'}</button>`}).join('')}</div></div>
+    <div><div class="small muted" style="margin-bottom:4px">새싹 화분${pt?'':' · 나 Lv 15에 열려요'}</div>
+      <div class="seg seg4">${POTS.map(([k,n])=>`<button type="button" class="${(state.pot||'')===k?'on':''}" data-pot="${k}" ${pt||!k?'':'disabled'} aria-pressed="${(state.pot||'')===k}">${n}</button>`).join('')}</div></div>
+  </div>`;
+}
+
+/* ---------- 고급 활동: 세부 능력 Lv 50부터 ---------- */
+const ADV_LV=50;
+const ADV_ACTS=[
+ {id:'adv_endur',name:'장거리 (하프마라톤·2시간 이상 고강도)',fx:{endur:8},adv:'endur'},
+ {id:'adv_upper',name:'고강도 상체 운동 1시간 이상',fx:{upper:5},adv:'upper'},
+ {id:'adv_lower',name:'고강도 하체 운동 1시간 이상',fx:{lower:5},adv:'lower'},
+ {id:'adv_know',name:'논문·보고서 한 편 완성',fx:{know:8},adv:'know'},
+ {id:'adv_focus',name:'4시간 이상 딥워크',fx:{focus:7},adv:'focus'},
+ {id:'adv_expr',name:'30분 이상 발표·강의하기',fx:{expr:6,talk:1},adv:'expr'},
+ {id:'adv_calm',name:'1시간 명상·요가 수련',fx:{calm:5},adv:'calm'},
+ {id:'adv_grit',name:'30일 습관 목표 달성',fx:{grit:6},adv:'grit'},
+ {id:'adv_resil',name:'큰 실패 뒤 다시 도전하기',fx:{resil:6},adv:'resil'},
+ {id:'adv_close',name:'소중한 사람과 하루 종일 보내기',fx:{close:6},adv:'close'},
+ {id:'adv_talk',name:'처음 가는 모임·네트워킹 참석',fx:{talk:6},adv:'talk'},
+ {id:'adv_lead',name:'프로젝트·행사 주최하기',fx:{lead:8},adv:'lead'},
+ {id:'adv_plan',name:'한 주 계획 세우고 회고하기',fx:{plan:5},adv:'plan'},
+ {id:'adv_tidy',name:'대청소 2시간 이상',fx:{tidy:6},adv:'tidy'},
+ {id:'adv_care',name:'직접 요리로 하루 세 끼',fx:{care:5},adv:'care'},
+];
+DEFAULT_ACTS.push(...ADV_ACTS);
+
+/* 나만의 활동: 경험치는 시간 단계로만, 칸 수는 나 레벨로 */
+const CUSTOM_KINDS=[['p1','30분 (+1)',1],['p2','1시간 이상 (+2)',2],['n1','해버린 일 (−1)',-1],['n2','해버린 일 (−2)',-2],['n3','해버린 일 (−3)',-3]];
+const customPos=()=>state.acts.filter(a=>isCustom(a)&&!a.bad);
+function capCustom(a){const fx={};let first=true;for(const k in a.fx){if(!SUB[k])continue;const v=a.fx[k];
+  if(v>0){if(!first)continue;fx[k]=Math.min(2,v);first=false}else fx[k]=Math.max(-3,v)}
+  return Object.assign({},a,{fx,bad:Object.values(fx).every(v=>v<0)})}
+function refreshActs(m){
+  const curIds=new Set((m.acts||[]).map(a=>a.id));
+  const known=new Set(m.knownDefaults||DEFAULT_ACTS.filter(a=>!a.adv).map(a=>a.id));
+  m.acts=[...DEFAULT_ACTS.filter(d=>curIds.has(d.id)||!known.has(d.id)).map(a=>JSON.parse(JSON.stringify(a))),...(m.acts||[]).filter(isCustom).map(capCustom)];
+  m.knownDefaults=DEFAULT_ACTS.map(a=>a.id);
+}
+
+/* ---------- 씨앗 · 보호권 · 정원 · 상점 ---------- */
+/* 씨앗은 퀘스트·업적·나 레벨로만 얻음. 능력치·나 레벨·승급은 살 수 없음 */
+const SEED_DQ=5, SEED_DQ_ALL=5, SEED_WQ=20, SEED_ACH=[10,25,50,100], SEED_PL=20;
+const FREEZE_COST=100, FREEZE_MAX=2, REROLL_COST=15;
+const SEED_IC='<svg class="seedic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5C11.5 4.5 13 7.5 13 10a5 5 0 0 1-10 0c0-2.5 1.5-5.5 5-8.5Z" fill="var(--c-life)"/><path d="M8 6v7" stroke="var(--surface)" stroke-width="1.4" stroke-linecap="round"/></svg>';
+const seedTag=n=>`<span class="seedtag num">${SEED_IC}${n}</span>`;
+const spent=st=>(st.buys||[]).reduce((a,b)=>a+(b.cost||0),0);
+const seedsOf=P=>Math.max(0,P.seedsEarned-spent(state));
+function buy(item,extra){state.buys=[...(state.buys||[]),Object.assign({id:item.id,cost:item.cost,date:todayStr()},extra||{})];save()}
+
+/* 정원: 씨앗으로 물과 거름을 줘서 키우는 식물. 능력치와 상관없음 */
+const PLANTS=[{k:'tree',n:'새싹나무'},{k:'sunflower',n:'해바라기'},{k:'cactus',n:'선인장'},{k:'cherry',n:'벚나무'},{k:'maple',n:'단풍나무'}];
+const GROW=[0,30,80,150,220,300], STAGE_N=['씨앗','새싹','어린 줄기','봉오리','개화','다 자람'];
+const CARE=[{id:'water',n:'물 주기',cost:5,g:5},{id:'fert',n:'거름 주기',cost:20,g:25}];
+function garden(){
+  const plots=(state.garden&&state.garden.plots)||[{k:'tree',start:state.startDate}];
+  const i=plots.length-1,cur=plots[i];
+  const g=(state.buys||[]).filter(b=>b.plot===i&&(b.id==='water'||b.id==='fert')).reduce((a,b)=>a+(CARE.find(c=>c.id===b.id)||{g:0}).g,0);
+  let stage=0;GROW.forEach((t,j)=>{if(g>=t)stage=j});
+  const done=plots.slice(0,i).map(p=>p.k);
+  return {plots,i,cur,g:Math.min(g,GROW[5]),stage,done,full:stage===5};
+}
+function potBase(pot){
+  const soil='var(--muted)';
+  return {
+    pot:`<path d="M20 58H56V63H20Z" fill="var(--c-body)"/><path d="M23 63H53L49 74H27Z" fill="var(--c-body)" opacity=".8"/>`,
+    jar:`<path d="M22 40H54V70Q54 74 50 74H26Q22 74 22 70Z" fill="var(--accent)" fill-opacity=".12" stroke="var(--muted)" stroke-width="1.5"/><path d="M24 62H52" stroke="${soil}" stroke-width="3"/>`,
+    cloud:`<path d="M18 68Q12 68 12 62Q12 56 19 56Q21 50 28 51Q33 46 40 50Q47 47 51 53Q60 52 62 59Q66 62 63 66Q61 68 57 68Z" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>`,
+  }[pot]||`<path d="M14 62 Q38 56 62 62" stroke="${soil}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+}
+function plantSVG(k,stage,pot,size){
+  const G='#3E9B5F',G2='#2C7A4A',BR='#7A5236',parts=[potBase(pot)];
+  const leaf=(x,y,dir,s)=>`<path d="M${x} ${y}Q${x+dir*10*s} ${y-9*s} ${x+dir*14*s} ${y-2*s}Q${x+dir*6*s} ${y+5*s} ${x} ${y}Z" fill="${G}"/>`;
+  if(stage===0)parts.push(`<ellipse cx="38" cy="57" rx="6" ry="4" fill="#9C7A4E"/><path d="M38 53Q40 49 43 48" stroke="${G}" stroke-width="2" fill="none" stroke-linecap="round"/>`);
+  else if(k==='cactus'){
+    const h=[0,10,18,26,32,36][stage];
+    parts.push(`<rect x="32" y="${60-h}" width="12" height="${h}" rx="6" fill="${G}"/><path d="M38 ${62-h}V58" stroke="${G2}" stroke-width="1.2"/>`);
+    if(stage>=3)parts.push(`<path d="M32 ${54-h/3}H26Q24 ${54-h/3} 24 ${51-h/3}V${44-h/3}" stroke="${G}" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M44 ${50-h/3}H50Q52 ${50-h/3} 52 ${47-h/3}V${40-h/3}" stroke="${G}" stroke-width="6" fill="none" stroke-linecap="round"/>`);
+    if(stage>=4)parts.push(`<circle cx="38" cy="${58-h}" r="4.5" fill="#F06FA0"/><circle cx="38" cy="${58-h}" r="1.8" fill="#FFE28A"/>`);
+    if(stage>=5)parts.push(`<circle cx="24" cy="${40-h/3}" r="3.5" fill="#F06FA0"/><circle cx="52" cy="${36-h/3}" r="3.5" fill="#F06FA0"/>`);
+  }else if(stage<=2){
+    const h=[0,12,22][stage];
+    parts.push(`<path d="M38 60V${60-h}" stroke="${G2}" stroke-width="3" stroke-linecap="round"/>`,leaf(38,60-h+2,-1,stage===1?.8:1.1),leaf(38,60-h+2,1,stage===1?.8:1.1));
+    if(stage===2)parts.push(leaf(38,60-h/2+2,-1,.8));
+  }else if(k==='sunflower'){
+    const h=stage===3?30:stage===4?36:40,cy=60-h;
+    parts.push(`<path d="M38 60V${cy}" stroke="${G2}" stroke-width="3.5" stroke-linecap="round"/>`,leaf(38,52,-1,1.2),leaf(38,46,1,1.1));
+    if(stage===3)parts.push(`<circle cx="38" cy="${cy}" r="6" fill="${G}"/><path d="M33 ${cy-3}L38 ${cy-8}L43 ${cy-3}" fill="${G2}"/>`);
+    else{const r=stage===4?7:9,pr=stage===4?12:15;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6;parts.push(`<ellipse cx="${(38+Math.cos(a)*(r+3)).toFixed(1)}" cy="${(cy+Math.sin(a)*(r+3)).toFixed(1)}" rx="${(pr-r)/1.6}" ry="2.6" fill="#F4C21E" transform="rotate(${i*30} ${(38+Math.cos(a)*(r+3)).toFixed(1)} ${(cy+Math.sin(a)*(r+3)).toFixed(1)})"/>`)}
+      parts.push(`<circle cx="38" cy="${cy}" r="${r}" fill="#6B4320"/>`)}
+  }else{
+    // 나무 종류: 줄기 + 수관
+    const crown={tree:['#3E9B5F','#2C7A4A'],cherry:['#F6A9C6','#EC86AE'],maple:['#E8743B','#C9472B']}[k]||['#3E9B5F','#2C7A4A'];
+    const big=stage===3?.6:stage===4?.85:1;
+    parts.push(`<path d="M38 60V${44-6*big}M38 50L31 44M38 48L45 42" stroke="${BR}" stroke-width="${3+big*1.5}" stroke-linecap="round"/>`);
+    const blobs=[[38,30,13],[27,36,10],[49,36,10],[32,26,9],[45,27,9]];
+    const col=k==='cherry'&&stage===3?['#6FB57F','#4E9A62']:crown;
+    blobs.forEach(([x,y,r],j)=>parts.push(`<circle cx="${x}" cy="${y+(1-big)*14}" r="${(r*big).toFixed(1)}" fill="${col[j%2]}"/>`));
+    if(k==='tree'&&stage>=4)[[33,32],[44,30],[39,38],[29,40],[48,40]].slice(0,stage===4?3:5).forEach(([x,y])=>parts.push(`<circle cx="${x}" cy="${y+(1-big)*14}" r="2.2" fill="#E5484D"/>`));
+    if(k==='cherry'&&stage===5)[[24,52],[52,55],[30,57]].forEach(([x,y])=>parts.push(`<circle cx="${x}" cy="${y}" r="1.8" fill="#F6A9C6"/>`));
+    if(k==='maple'&&stage===5)[[26,55],[50,53]].forEach(([x,y])=>parts.push(`<path d="M${x} ${y-3}L${x+2} ${y}L${x} ${y+3}L${x-2} ${y}Z" fill="#E8743B"/>`));
+  }
+  return `<svg viewBox="0 0 76 76" width="${size||64}" height="${size||64}" aria-hidden="true">${parts.join('')}</svg>`;
+}
+
+/* 꾸미기 상점: 카드 캐릭터의 배경과 친구 */
+const SHOP=[
+ {id:'bg_sky',kind:'bg',n:'맑은 하늘',cost:60,css:'linear-gradient(180deg,#BFE3FF,#EAF6FF)'},
+ {id:'bg_dusk',kind:'bg',n:'노을 언덕',cost:60,css:'linear-gradient(180deg,#FFB38A,#FFE1C7)'},
+ {id:'bg_stars',kind:'bg',n:'별밤',cost:100,css:'radial-gradient(circle at 20% 25%,#fff 0 1px,transparent 1.5px),radial-gradient(circle at 70% 18%,#fff 0 1px,transparent 1.5px),radial-gradient(circle at 82% 52%,#fff 0 .8px,transparent 1.3px),radial-gradient(circle at 35% 60%,#fff 0 .8px,transparent 1.3px),linear-gradient(180deg,#1B2350,#3B3F7A)'},
+ {id:'bg_rainbow',kind:'bg',n:'무지개',cost:150,css:'radial-gradient(circle at 50% 110%,transparent 38%,#FF8A8A 38% 44%,#FFC46B 44% 50%,#FFF07A 50% 56%,#8EE08A 56% 62%,#7FC8FF 62% 68%,#B79BFF 68% 74%,transparent 74%),linear-gradient(180deg,#E7F6FF,#FFFFFF)'},
+ {id:'fr_ladybug',kind:'friend',n:'무당벌레',cost:80,svg:'<circle cx="12" cy="13" r="7" fill="#E5484D"/><path d="M12 6V20" stroke="#1E1E1E" stroke-width="1"/><circle cx="12" cy="6.5" r="3" fill="#1E1E1E"/><circle cx="9" cy="12" r="1.5" fill="#1E1E1E"/><circle cx="15" cy="15" r="1.5" fill="#1E1E1E"/><circle cx="14.5" cy="10" r="1.2" fill="#1E1E1E"/>'},
+ {id:'fr_snail',kind:'friend',n:'달팽이',cost:80,svg:'<path d="M3 19H19Q21 19 21 17" stroke="#E2C59A" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="11" cy="13" r="6" fill="#B07A45"/><path d="M11 13m-3 0a3 3 0 1 0 3-3" stroke="#F3DDB8" stroke-width="1.3" fill="none"/><path d="M19 17V11M21 17V12" stroke="#E2C59A" stroke-width="1.2"/>'},
+ {id:'fr_butterfly',kind:'friend',n:'나비',cost:120,svg:'<path d="M12 12C8 4 2 5 3 10C4 14 9 14 12 12ZM12 12C16 4 22 5 21 10C20 14 15 14 12 12Z" fill="#B48CF0"/><path d="M12 12C9 17 5 19 6 15C7 13 10 12 12 12ZM12 12C15 17 19 19 18 15C17 13 14 12 12 12Z" fill="#F08AC8"/><path d="M12 7V18" stroke="#3B2A55" stroke-width="1.6" stroke-linecap="round"/>'},
+ {id:'fr_bee',kind:'friend',n:'꿀벌',cost:150,svg:'<ellipse cx="9" cy="8" rx="4" ry="3" fill="#EAF6FF" stroke="#9BB7C9" stroke-width=".6"/><ellipse cx="15" cy="8" rx="4" ry="3" fill="#EAF6FF" stroke="#9BB7C9" stroke-width=".6"/><ellipse cx="12" cy="14" rx="7" ry="5" fill="#F4C21E"/><path d="M10 9.5V18.5M14 9.5V18.5" stroke="#2B2B2B" stroke-width="2"/>'},
+];
+const owned=id=>(state.buys||[]).some(b=>b.id===id);
+function avatarStyle(){const it=SHOP.find(x=>x.id===(state.look||{}).bg);return it&&owned(it.id)?` style="background:${it.css}"`:''}
+function avatarFriend(){const it=SHOP.find(x=>x.id===(state.look||{}).friend);return it&&owned(it.id)?`<svg class="friend" viewBox="0 0 24 24" aria-hidden="true">${it.svg}</svg>`:''}
+function avatarArt(avg,P){
+  if((state.look||{}).card==='garden'){const G=garden();return plantSVG(G.cur.k,G.stage,has(P,'pot')?state.pot:'')}
+  return sprout(Math.min(4,Math.floor(avg/20)),has(P,'pot')?state.pot:'');
+}
+
+/* ---------- 정원·상점 화면 ---------- */
+function renderGarden(P){
+  const G=garden(),bal=seedsOf(P),pl=PLANTS.find(p=>p.k===G.cur.k)||PLANTS[0];
+  const nextT=GROW[Math.min(5,G.stage+1)],prevT=GROW[G.stage];
+  const pct=G.full?100:Math.round((G.g-prevT)/(nextT-prevT)*100);
+  const nextPlants=PLANTS.filter((p,j)=>j<=Math.min(PLANTS.length-1,G.plots.length));
+  const fz=P.fzHave;
+  return `<div class="card seedcard"><div class="plhead"><span class="ctier">내 씨앗</span><span class="seedbig num">${SEED_IC}${bal}</span></div>
+      <div class="small muted">퀘스트 하나 +${SEED_DQ}, 모두 완료 +${SEED_DQ_ALL}, 주간 퀘스트 +${SEED_WQ}, 업적 +${SEED_ACH.join('/')}, 나 레벨 업 +${SEED_PL}</div></div>
+    <div class="card gardencard">
+      <div class="gplot"${avatarStyle()}>${plantSVG(G.cur.k,G.stage,state.pot&&has(P,'pot')?state.pot:'',150)}${avatarFriend()}</div>
+      <div class="gname"><b>${pl.n}</b><span class="pill">${STAGE_N[G.stage]}</span></div>
+      <div class="aprog"><i style="width:${pct}%"></i></div>
+      <div class="small muted num">${G.full?'다 자랐어요! 새 식물을 심을 수 있어요':`성장 ${G.g} / ${GROW[5]} · 다음 단계까지 ${nextT-G.g}`}</div>
+      ${G.full?`<div class="sec-label" style="margin-top:4px">다음에 심을 식물</div><div class="seg seg3">${nextPlants.map(p=>`<button type="button" data-plant="${p.k}">${p.n}</button>`).join('')}</div>`
+        :`<div class="row">${CARE.map(c=>`<button type="button" class="btn${c.id==='water'?' ghost':''}" data-care="${c.id}" ${bal<c.cost?'disabled':''}>${c.n} <span class="num">+${c.g}</span> · ${seedTag(c.cost)}</button>`).join('')}</div>`}
+      ${G.done.length?`<div class="small muted">다 키운 식물: ${G.done.map(k=>(PLANTS.find(p=>p.k===k)||{}).n).join(', ')}</div>`:''}
+      <label class="tgl"><input type="checkbox" id="cardGarden" ${(state.look||{}).card==='garden'?'checked':''}> 캐릭터 카드에 정원 식물 보여주기</label>
+    </div>
+    <div class="sec-label">상점</div>
+    <div class="card shop">
+      <div class="shoprow"><div class="sic">${flameIcon()}</div><div style="min-width:0"><div class="un">연속 기록 보호권</div><div class="small muted">하루를 빼먹으면 자동으로 쓰여서 연속 기록이 이어져요. 그날 능력치 차감은 그대로예요. 최대 ${FREEZE_MAX}개 · 지금 <b class="num">${fz}</b>개</div></div>
+        <button type="button" class="x buyb" data-buy="freeze" ${bal<FREEZE_COST||fz>=FREEZE_MAX?'disabled':''}>${fz>=FREEZE_MAX?'가득':seedTag(FREEZE_COST)}</button></div>
+      ${SHOP.map(it=>{const own=owned(it.id),eq=(state.look||{})[it.kind]===it.id;
+        return `<div class="shoprow"><div class="sic"${it.kind==='bg'?` style="background:${it.css}"`:''}>${it.kind==='friend'?`<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">${it.svg}</svg>`:''}</div>
+          <div style="min-width:0"><div class="un">${it.n}</div><div class="small muted">${it.kind==='bg'?'카드·정원 배경':'카드·정원 친구'}</div></div>
+          ${own?`<button type="button" class="x${eq?' on':''}" data-equip="${it.id}">${eq?'빼기':'달기'}</button>`:`<button type="button" class="x buyb" data-buy="${it.id}" ${bal<it.cost?'disabled':''}>${seedTag(it.cost)}</button>`}</div>`}).join('')}
+    </div>
+    <div class="note">씨앗으로는 능력치·나 레벨·승급을 살 수 없어요. 실력은 실제로 한 만큼만 오르게 하려고요.</div>`;
+}
+function flameIcon(){return '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 2C15 6 18 8.5 18 13a6 6 0 0 1-12 0c0-2.8 1.5-4.4 2.6-6.3.6 2.1 1.6 2.9 2.6 2.4.8-1.8.6-4 .8-7.1Z" fill="#FF8A3D"/><path d="M12 11c1.6 2 2.6 3 2.6 4.6a2.6 2.6 0 0 1-5.2 0c0-1.3.9-2.2 1.6-3 .3.8.7 1 1 .8Z" fill="#FFD25E"/></svg>'}
+function bindGarden(){
+  document.querySelectorAll('[data-care]').forEach(b=>b.onclick=()=>{const c=CARE.find(x=>x.id===b.dataset.care);
+    if(seedsOf(curP)<c.cost){showToast('씨앗이 모자라요.');return}
+    const before=garden().stage;buy(c,{plot:garden().i});keepScroll(render);
+    const after=garden().stage;showToast(after>before?`<b>쑥쑥!</b> ${STAGE_N[after]} 단계가 됐어요`:`${c.n} · 성장 +${c.g}`,after>before)});
+  document.querySelectorAll('[data-plant]').forEach(b=>b.onclick=()=>{const G=garden();if(!G.full)return;
+    state.garden={plots:[...G.plots,{k:b.dataset.plant,start:todayStr()}]};save();keepScroll(render);showToast(`${(PLANTS.find(p=>p.k===b.dataset.plant)||{}).n}을 심었어요.`)});
+  document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.buy,bal=seedsOf(curP);
+    if(id==='freeze'){if(curP.fzHave>=FREEZE_MAX||bal<FREEZE_COST)return;buy({id:'freeze',cost:FREEZE_COST});keepScroll(render);showToast('연속 기록 보호권을 샀어요.');return}
+    const it=SHOP.find(x=>x.id===id);if(!it||bal<it.cost)return;
+    buy(it);state.look=Object.assign({},state.look,{[it.kind]:it.id});save();keepScroll(render);showToast(`${it.n}을 샀어요. 바로 달았어요.`)});
+  document.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{const it=SHOP.find(x=>x.id===b.dataset.equip);const look=Object.assign({},state.look);
+    look[it.kind]=look[it.kind]===it.id?'':it.id;state.look=look;save();keepScroll(render)});
+  const cg=$('#cardGarden');if(cg)cg.onchange=()=>{state.look=Object.assign({},state.look,{card:cg.checked?'garden':''});save();keepScroll(render)};
+  document.querySelectorAll('[data-qsub]').forEach(b=>b.onclick=()=>{qsub=b.dataset.qsub;render();window.scrollTo(0,0)});
+}
+let qsub='quest';
+
+/* ---------- 그리기 ---------- */
+function render(){
+  const app=$('#app');
+  if(!state||onboard){$('#tabs').hidden=true;app.innerHTML=renderOnboard();bindOnboard();return}
+  $('#tabs').hidden=false;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
+  const R=replay(state);let P=progress(state,R);if(ensureQuests(R,P)){P=progress(state,R);save()}curP=P;applySkin();
+  const cl=catLevels(R.cur);const avg=avgOf(cl);
+  const logged=R.days.filter(x=>x.kind==='log').length;
+  const tags=condTags(state.cond[todayStr()]);
+  let h=`<section class="hero">
+    <div class="avatar"${avatarStyle()}>${avatarArt(avg,P)}${avatarFriend()}</div>
+    <div><h1>${esc(state.name||'나')}</h1>
+      <div class="meta"><span class="badge">${titleOf(avg)}</span>${state.title&&has(P,'title')?`<button type="button" class="tchip" data-title>「${esc(state.title)}」</button>`:has(P,'title')?`<button type="button" class="tchip empty" data-title>+ 칭호</button>`:''}<span>평균 <b class="num">Lv ${avg}</b></span><span>기록 <b class="num">${logged}</b>일</span>${P.S.streak>=2?`<span class="streak">연속 <b class="num">${P.S.streak}</b>일${P.fzHave?` · 보호권 ${P.fzHave}`:''}</span>`:''}</div>
+      <div class="status">${tags.length?tags.map(t=>`<span class="stag ${t.bad?'neg':'pos'}">${t.t}</span>`).join(''):`<span class="small muted">${state.cond[todayStr()]?'오늘 상태: 평범함':'오늘 컨디션을 아직 기록하지 않았어요'}</span>`}</div></div>
+    <button type="button" class="plrow" data-gotab="quest"><span class="num"><b>나 Lv ${P.pl.lvl}</b></span><span class="plbar"><i style="width:${Math.round(P.pl.xp/P.pl.need*100)}%"></i></span><span class="small muted num">${P.pl.xp}/${P.pl.need}</span>${seedTag(seedsOf(P))}</button>
+    <div class="mini">${CATS.map(c=>`<div><b style="color:var(--c-${c.k})">${cl[c.k]}</b><span>${c.n}</span></div>`).join('')}</div>
+  </section>`;
+  if(tab==='today')h+=renderToday(R);
+  if(tab==='quest')h+=renderQuest(R,P);
+  if(tab==='stats')h+=renderStats(R);
+  if(tab==='hist')h+=renderHist(R);
+  if(tab==='set')h+=renderSet();
+  app.innerHTML=h;bind();
+  checkCelebrations(P);
+}
+let curP=null;
+
+function actGroup(a){if(a.bad)return 'bad';const k=Object.keys(a.fx).find(k=>a.fx[k]>0&&SUB[k]);return k?SUB[k].cat:'bad'}
+const posSum=fx=>Object.values(fx).filter(v=>v>0).reduce((a,b)=>a+b,0);
+const subNames=fx=>'<div class="chips">'+Object.keys(fx).filter(k=>SUB[k]&&fx[k]>0).map(k=>`<span class="chip" style="color:${color(k)}">${SUB[k].n}</span>`).join('')+'</div>';
+function waitingList(R){
+  const w=SUBS.filter(s=>R.cur[s.k].wait).map(s=>`${s.n} → Lv ${R.cur[s.k].wait}`);
+  state.studies.filter(s=>!s.archived&&R.scur[s.id].wait).forEach(s=>w.push(`${esc(s.name)} → Lv ${R.scur[s.id].wait}`));
+  return w;
+}
+function renderToday(R){
+  const today=todayStr();if(viewDay>today)viewDay=today;if(viewDay<state.startDate)viewDay=state.startDate;
+  const log=state.logs[viewDay]||[];const day=R.days.find(x=>x.d===viewDay);const cd=catDelta(day.delta);
+  const label=viewDay===today?'오늘':viewDay===addDays(today,-1)?'어제':fmtDay(viewDay);
+  const actBtn=a=>`<button type="button" class="act${a.bad?' bad':''}${log.includes(a.id)?' on':''}" data-act="${a.id}" aria-pressed="${log.includes(a.id)}">
+      <span class="box">✓</span><span><span class="t">${a.adv?'<span class="advtag">고급</span>':''}${esc(a.name)}</span>${fxChips(a.fx)}</span></button>`;
+  const tierCard=list=>{const on=list.find(a=>log.includes(a.id));const top=list[list.length-1];
+    return `<div class="act tier${on?' on':''}"><span class="box">✓</span><span style="min-width:0"><span class="t">${esc(list[0].grpN)}</span>${subNames(top.fx)}
+      <span class="tiers">${list.map(a=>`<button type="button" class="tbtn${log.includes(a.id)?' on':''}" data-act="${a.id}" aria-pressed="${log.includes(a.id)}">${esc(a.name)} <b class="num">+${posSum(a.fx)}</b></button>`).join('')}</span></span></div>`};
+  const renderList=list=>{const seen=new Set();return list.map(a=>{
+    if(!a.grp)return actBtn(a);if(seen.has(a.grp))return '';seen.add(a.grp);
+    return tierCard(list.filter(x=>x.grp===a.grp))}).join('')};
+  const taxSum=Object.values(day.taxed||{}).reduce((a,b)=>a+b,0);
+  const taxNote=taxSum?`높은 레벨의 세부 능력 ${Object.keys(day.taxed).length}개에서 기본 차감 <b class="num">-${taxSum} XP</b>가 빠져요. 그 이상 해야 오르거나 유지돼요.`:'아직 기본 차감이 붙은 능력이 없어요. 지력·체력은 Lv 40, 나머지는 Lv 50부터 붙어요.';
+  const kindNote=day.kind==='miss'?'이 날은 기록이 없어서 기본 차감만 적용됐어요. 지금 기록하면 다시 계산돼요. ':day.kind==='none'?'컨디션과 한 일을 체크하면 바로 반영돼요. ':'';
+  const w=waitingList(R);
+  const groups=[...CATS.map(c=>({k:c.k,n:c.n})),{k:'bad',n:'해버린 일'}];
+  return `<section class="panel">
+    ${todayQuestStrip(curP)}
+    ${w.length&&viewDay===today?`<button type="button" class="waitbar" data-gostats><b>승급 시험 대기</b><span>${w.join(' · ')}</span><span class="small">능력치 탭에서 측정을 기록하면 레벨이 올라요 ›</span></button>`:''}
+    <div class="daybar"><button type="button" id="prevDay" aria-label="이전 날" ${viewDay<=state.startDate?'disabled':''}>‹</button>
+      <div class="d"><b>${label}</b><span class="small muted">${viewDay===today?fmtDay(viewDay):viewDay}</span></div>
+      <button type="button" id="nextDay" aria-label="다음 날" ${viewDay>=today?'disabled':''}>›</button></div>
+    <div class="delta">${CATS.map(c=>`<div><div class="v ${cls(cd[c.k])}">${sgn(cd[c.k])}</div><div class="n">${c.n} XP</div></div>`).join('')}</div>
+    <div class="note">${kindNote}${taxNote}</div>
+    <div class="sec-label">컨디션</div>
+    <div class="card cond">${COND.map(q=>{const v=(state.cond[viewDay]||{})[q.k];
+      return `<div class="crow"><div class="cn">${q.n}</div><div class="seg">${q.o.map((o,j)=>`<button type="button" class="${v===j?'on':''}" data-ck="${q.k}" data-cv="${j}" aria-pressed="${v===j}">${o}</button>`).join('')}</div></div>`}).join('')}
+      ${Object.keys(condFx(state.cond[viewDay])).length?`<div><span class="small muted">컨디션 효과</span>${fxChips(condFx(state.cond[viewDay]))}</div>`:''}
+    </div>
+    ${renderStudyToday(R,day)}
+    ${groups.map(g=>{const all=state.acts.filter(a=>actGroup(a)===g.k);
+      const list=all.filter(a=>!a.adv||R.cur[a.adv].lvl>=ADV_LV||log.includes(a.id));const lockedAdv=all.filter(a=>a.adv&&!list.includes(a));if(!list.length)return '';
+      const n=new Set(list.filter(a=>log.includes(a.id)).map(a=>a.grp||a.id)).size;
+      return `<div class="sec-label grp" ${g.k!=='bad'?`style="color:var(--c-${g.k})"`:''}><span>${g.n}</span>${n?`<span class="num">${n}</span>`:''}</div><div class="acts">${renderList(list)}</div>${lockedAdv.length?`<div class="small muted advlock">고급 활동 ${lockedAdv.length}개 잠김 · ${lockedAdv.map(a=>SUB[a.adv].n).join(', ')} Lv ${ADV_LV}에 열려요</div>`:''}`}).join('')}
+  </section>`;
+}
+const activeStudies=d=>state.studies.filter(s=>!s.archived&&s.start<=d);
+function renderStudyToday(R,day){
+  const list=activeStudies(viewDay);const sl=(state.slogs[viewDay]||{});
+  const head=`<div class="sec-label grp" style="color:var(--c-intel)"><span>공부</span><button type="button" class="linkbtn" data-addstudy>+ 공부 추가</button></div>`;
+  if(!list.length)return head+`<div class="note">학교 과목, JLPT 같은 자격증·어학, 그 밖의 공부를 하나씩 따로 키울 수 있어요. 공부한 날은 지식도 +1 올라요 (하루 한 번).</div>`;
+  return head+`<div class="studies">${list.map(s=>{const t=STYPES[s.type],on=sl[s.id]||[],c=R.scur[s.id],x=(day.sdelta||{})[s.id]||0;
+    const tiers=t.acts.filter(a=>a[3]==='time'),others=t.acts.filter(a=>a[3]!=='time');
+    const b=([k,n,xp])=>`<button type="button" class="sbtn${on.includes(k)?' on':''}" data-sid="${s.id}" data-sa="${k}" aria-pressed="${on.includes(k)}">${n} <b class="num">+${xp}</b></button>`;
+    return `<div class="scard"><div class="stop"><div style="min-width:0"><div class="snm">${esc(s.name)}</div>
+        <div class="small muted">${t.n}${s.goal?' · '+esc(s.goal):''}${s.date?` · <b class="num">${dday(s)}</b>`:''}</div></div>
+        <div class="slv"><span class="num">Lv ${c.lvl}</span><span class="small num ${cls(x)}">${sgn(x)} XP</span></div></div>
+      ${c.wait?`<div class="pill wait">경험치 가득 · Lv ${c.wait} 승급 시험 필요</div>`:''}
+      <div><div class="small muted" style="margin-bottom:4px">공부 시간</div><div class="tiers">${tiers.map(b).join('')}</div></div>
+      <div class="sbtns">${others.map(b).join('')}</div></div>`}).join('')}</div>`;
+}
+let sform=null, confirmDel=null, measOpen=null;
+function newSForm(){return {name:'',type:'school',goal:'',date:'',ans:[]}}
+const sformBase=()=>{const a=sform.ans;return Math.round(10+(a.reduce((x,y)=>x+y,0)/a.length)*20)};
+const sformDone=()=>sform.name.trim()&&STYPES[sform.type].qs.every((q,i)=>sform.ans[i]!=null);
+function renderStudyForm(){
+  const t=STYPES[sform.type];const actsTxt='활동: 공부 시간 30분 +1 · 1시간 +2 · 2시간 +4 · 3시간 이상 +6, '+t.acts.filter(a=>a[3]!=='time').map(a=>a[1]+' +'+a[2]).join(', ');
+  return `<div class="card" id="sform"><h3>공부 추가</h3>
+    <label for="sfName">이름<input id="sfName" maxlength="30" placeholder="예: 교육평가, JLPT N2" value="${esc(sform.name)}"></label>
+    <div><div class="small muted" style="margin-bottom:4px">종류</div><div class="seg seg3">${Object.entries(STYPES).map(([k,v])=>`<button type="button" class="${sform.type===k?'on':''}" data-stype="${k}" aria-pressed="${sform.type===k}">${v.n}</button>`).join('')}</div></div>
+    <div class="row"><label for="sfGoal">목표 (선택)<input id="sfGoal" maxlength="40" placeholder="${t.goalPh}" value="${esc(sform.goal)}"></label>
+      <label for="sfDate">${t.dateN} (선택)<input id="sfDate" type="date" value="${esc(sform.date)}"></label></div>
+    ${t.qs.map((q,i)=>`<div class="q"><div class="qt">${q[0]}</div><div class="opts">${q[1].map((o,j)=>`<button type="button" class="opt${sform.ans[i]===j?' on':''}" data-sq="${i}" data-o="${j}" aria-pressed="${sform.ans[i]===j}">${o}</button>`).join('')}</div></div>`).join('')}
+    <div class="note" id="sfPreview" data-acts="${esc(actsTxt)}">${t.qs.every((q,i)=>sform.ans[i]!=null)?`시작 레벨 <b class="num">Lv ${sformBase()}</b>. `:'질문에 답하면 시작 레벨이 정해져요. '}${actsTxt}</div>
+    <div class="row"><button type="button" class="btn ghost" id="sfCancel">취소</button><button type="button" class="btn" id="sfAdd" ${sformDone()?'':'disabled'}>추가하기</button></div>
+  </div>`;
+}
+function nextGate(c){return c.wait||Math.min(100,(Math.floor(c.lvl/10)+1)*10)}
+function autoCount(k){if(!AUTO[k])return null;let n=0;for(let i=0;i<14;i++)if(AUTO[k](addDays(todayStr(),-i)))n++;return n}
+function measureForm(k,c,name){
+  const cr=critOf(k),G=nextGate(c),th=cr.t[G/10-1],auto=autoCount(k);
+  return `<div class="meas" id="measForm">
+    <div class="small"><b>Lv ${G} 승급 기준</b> · ${esc(cr.m)} <b class="num">${th}${cr.u}</b> 이상</div>
+    ${auto!=null?`<div class="small muted">최근 14일 기록으로는 ${auto}${cr.u}예요. 실제와 다르면 고쳐 주세요.</div>`:''}
+    <div class="row"><label for="measIn">측정값 (${cr.u})<input id="measIn" type="number" inputmode="decimal" min="0" step="any" value="${auto!=null?auto:''}"></label></div>
+    <div class="row"><button type="button" class="btn ghost" id="measCancel">취소</button><button type="button" class="btn" id="measSave" data-k="${k}">기록하기</button></div>
+    <div class="small muted">기준을 넘으면 그 아래 승급 시험은 모두 통과로 기록돼요. 기준은 설정에서 고칠 수 있어요.</div>
+  </div>`;
+}
+function statRow({k,name,meta,c,fallback,colorVar,first,extraActs,archived}){
+  const n=need(c.lvl),pct=c.lvl>=100?100:Math.round(c.xp/n*100);
+  const wk=c.lvl-(first??c.lvl);const lt=lvText(c.lvl,k,fallback);const tx=tax(c.lvl,catOf(k));
+  const lastM=(state.tests||[]).filter(x=>x.k===k).map(x=>x.date).sort().pop();
+  return `<div class="subrow"><div style="min-width:0"><div class="sn">${name}</div>${meta?`<div class="small muted">${meta}</div>`:''}</div>
+    <div class="sl num">${lt.t}</div>
+    <div class="bar${c.wait?' full':''}"><i style="width:${c.wait?100:pct}%;background:${colorVar}"></i></div>
+    <div class="sub"><span class="num">${c.lvl>=100?'MAX':c.wait?`경험치 가득 · Lv ${c.wait} 승급 시험 필요`:`${c.xp} / ${n} XP`}</span><span>7일 <b class="num ${cls(wk)}">${sgn(wk)}</b></span></div>
+    <div class="sub"><span class="pills">${archived?'<span class="pill">보관됨 · 멈춤</span>':`<span class="pill ${tx?'neg':''}">${tx?`하루 -${tx}`:'차감 없음'}</span>`}${lt.pm?`<span class="pill neg">측정 ${lt.age}일 전 · ±${lt.pm}</span>`:''}</span>
+      <span class="sact">${archived?'':`<button type="button" class="x" data-meas="${k}">측정</button>`}${extraActs||''}</span></div>
+    ${!archived&&measOpen===k?measureForm(k,c,name):''}
+    ${measOpen===k?'':`<div class="small muted">${lastM?`마지막 측정 ${fmtDay(lastM)}`:'아직 측정 기록 없음 · 진단 기준'}</div>`}
+  </div>`;
+}
+function renderStudyStats(R){
+  const first=R.days[Math.max(0,R.days.length-8)];
+  const act=state.studies.filter(s=>!s.archived),arc=state.studies.filter(s=>s.archived);
+  const row=s=>statRow({k:s.id,name:esc(s.name),meta:`${STYPES[s.type].n}${s.goal?' · '+esc(s.goal):''}${s.date?' · <b class="num">'+dday(s)+'</b>':''}`,
+    c:R.scur[s.id],fallback:s.start,colorVar:'var(--c-intel)',first:(first.ssnap||{})[s.id],archived:s.archived,
+    extraActs:confirmDel===s.id?`<button type="button" class="x danger" data-sdelok="${s.id}">기록까지 삭제</button><button type="button" class="x" data-sdelno>취소</button>`
+      :`${s.archived?`<button type="button" class="x" data-srest="${s.id}">다시 공부</button>`:`<button type="button" class="x" data-sarch="${s.id}">보관</button>`}<button type="button" class="x" data-sdel="${s.id}">삭제</button>`});
+  return `<div class="sec-label grp" style="color:var(--c-intel)"><span>공부</span>${sform?'':'<button type="button" class="linkbtn" data-addstudy>+ 공부 추가</button>'}</div>
+    ${sform?renderStudyForm():''}
+    ${act.length?`<div class="catcard"><div class="subs" style="border-top:none">${act.map(row).join('')}</div></div>`:(sform?'':'<div class="note">아직 추가한 공부가 없어요. 과목이나 시험 공부를 추가하면 여기서 따로 레벨을 볼 수 있어요.</div>')}
+    ${arc.length?`<div class="small muted">보관한 공부 · 학기가 끝난 과목처럼 레벨이 멈춰 있어요</div><div class="catcard"><div class="subs" style="border-top:none">${arc.map(row).join('')}</div></div>`:''}`;
+}
+function renderStats(R){
+  const first=R.days[Math.max(0,R.days.length-8)];const cl=catLevels(R.cur);
+  return `<section class="panel"><div class="radar">${radar(cl)}</div>
+   ${CATS.map(c=>{const open=openCats.has(c.k)||c.subs.some(([k])=>measOpen===k);const wt=c.subs.filter(([k])=>R.cur[k].wait).length;
+     return `<div class="catcard"><button type="button" class="cathead" data-cat="${c.k}" aria-expanded="${open}">
+        <span class="nm"><span class="dot" style="background:var(--c-${c.k})"></span>${c.n}${wt?`<span class="pill wait">승급 대기 ${wt}</span>`:''}</span>
+        <span class="subsum">${c.subs.map(([k])=>`<span>${SUB[k].n} <b class="num">${R.cur[k].lvl}</b></span>`).join('')}</span>
+        <span class="lv">${cl[c.k]}<small>/100</small></span><span class="chev">${open?'−':'+'}</span></button>
+      ${open?`<div class="subs">${c.subs.map(([k])=>statRow({k,name:SUB[k].n,c:R.cur[k],fallback:state.diagnosedAt||state.startDate,colorVar:`var(--c-${c.k})`,first:first.snap[k]})).join('')}</div>`:''}
+     </div>`}).join('')}
+   ${renderStudyStats(R)}
+   <div class="note rules"><b>규칙</b><br>
+     · 레벨이 높을수록 매일 기본 차감이 커져요. 지력·체력·공부: Lv 40~59 -1, 60~79 -3, 80~84 -6, 85~89 -8, 90~94 -10, 95 이상 -12. 정신력·사회성·생활력: Lv 50~69 -1, 70~84 -2, 85~94 -3, 95 이상 -4.<br>
+     · 레벨업 경험치: Lv 0~19 10, 20~39 15, 40~59 25, 60~69 45, 70~79 70, 80~84 110, 85~89 160, 90~94 230, 95 이상 320.<br>
+     · 10레벨마다(30, 40 …) 승급 시험을 통과해야 올라가요. 그 전까지는 경험치가 가득 찬 채로 멈춰요.<br>
+     · 측정한 지 ${STALE_DAYS}일이 지나면 레벨이 ± 범위로 표시돼요.</div>
+  </section>`;
+}
+function renderHist(R){
+  const rows=R.days.slice().reverse().filter(x=>x.kind!=='none');
+  const graph=has(curP,'graph')?growthChart(R):`<div class="note locked">30일 성장 그래프는 나 Lv 7에 열려요.</div>`;
+  if(!rows.length)return `<section class="panel">${graph}<div class="note">아직 쌓인 기록이 없어요. ‘오늘’ 탭에서 컨디션과 한 일을 체크하면 여기에 하루씩 쌓여요.</div></section>`;
+  return `<section class="panel">${graph}<div class="hist">${rows.slice(0,60).map(x=>{const cd=catDelta(x.delta);const tg=condTags(state.cond[x.d]);return `
+    <div class="hrow${x.kind==='miss'?' miss':''}"><div class="top"><b>${fmtDay(x.d)}</b><span class="small muted">${x.kind==='miss'?(curP&&curP.frozen[x.d]?'기록 없음 · 보호권 사용':'기록 없음'):((state.logs[x.d]||[]).length+Object.values(state.slogs[x.d]||{}).reduce((n,l)=>n+l.length,0))+'개 체크'}</span></div>
+     ${tg.length?`<div class="status">${tg.map(t=>`<span class="stag ${t.bad?'neg':'pos'}">${t.t}</span>`).join('')}</div>`:''}
+     <div class="chips">${CATS.filter(c=>cd[c.k]).map(c=>`<span class="chip" style="color:var(--c-${c.k})">${c.n} <b>${sgn(cd[c.k])}</b></span>`).join('')}</div>
+     ${Object.entries(x.sdelta||{}).some(([,v])=>v)?`<div class="chips">${Object.entries(x.sdelta).filter(([,v])=>v).map(([id,v])=>{const s=state.studies.find(z=>z.id===id);return s?`<span class="chip" style="color:var(--c-intel)">${esc(s.name)} <b>${sgn(v)}</b></span>`:''}).join('')}</div>`:''}
+     ${x.ev.length||(x.sev||[]).length?`<div class="ev">${[...x.ev.map(e=>`<span class="${e.to>e.from?'pos':'neg'}">${SUB[e.k].n} Lv ${e.from} → ${e.to}</span>`),...(x.sev||[]).map(e=>{const s=state.studies.find(z=>z.id===e.id);return s?`<span class="${e.to>e.from?'pos':'neg'}">${esc(s.name)} Lv ${e.from} → ${e.to}</span>`:''})].join(' · ')}</div>`:''}
+    </div>`}).join('')}</div></section>`;
+}
+
+function renderCrit(){
+  const row=(k,name)=>{const c=critOf(k);return `<div class="critrow"><div class="small"><b>${name}</b> · ${esc(c.m)} (${c.u})</div>
+    <input data-crit="${k}" aria-label="${esc(String(name).replace(/<[^>]+>/g,''))} 승급 기준" value="${c.t.join(', ')}" inputmode="decimal"></div>`};
+  return `<div class="card"><h3>승급 기준</h3>
+    <p class="small muted" style="margin:0">Lv 10, 20 … 100 순서로 10개 값이에요. 측정값이 이 이상이면 그 레벨 승급 시험을 통과해요.</p>
+    ${SUBS.map(s=>row(s.k,s.n)).join('')}
+    ${state.studies.map(s=>row(s.id,esc(s.name))).join('')}
+    <button type="button" class="btn ghost" id="critReset">모두 기본값으로</button></div>`;
+}
+function renderSet(){
+  return `<section class="panel">
+   <div class="card"><h3>이름</h3><label for="nameIn">캐릭터 이름<input id="nameIn" maxlength="20" value="${esc(state.name||'')}"></label></div>
+   ${renderLook(curP)}
+   <div class="card"><h3>나만의 활동</h3>
+     <p class="small muted" style="margin:0">경험치는 시간으로만 정해져요. 한 일은 나 레벨로 칸이 늘어나고(지금 <b class="num">${customPos().length}/${slots(curP)}</b>칸), 해버린 일은 제한 없이 추가할 수 있어요.</p>
+     ${state.acts.filter(isCustom).length?`<div class="mlist">${state.acts.filter(isCustom).map(a=>`<div class="mitem"><div style="min-width:0"><div>${esc(a.name)}</div>${fxChips(a.fx)}</div><button type="button" class="x" data-del="${a.id}">삭제</button></div>`).join('')}</div>`:''}
+     <label for="newName">활동 이름<input id="newName" maxlength="30" placeholder="예: 영어 단어 30개 외우기"></label>
+     <div class="row"><label for="newStat">세부 능력<select id="newStat">${CATS.map(c=>`<optgroup label="${c.n}">${c.subs.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</optgroup>`).join('')}</select></label>
+       <label for="newKind">종류<select id="newKind">${CUSTOM_KINDS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></label></div>
+     <button type="button" class="btn" id="addAct">추가하기</button>
+     ${slots(curP)<3?`<p class="small muted" style="margin:0">한 일 칸은 나 Lv ${[3,12,20][slots(curP)]}에 하나 더 열려요.</p>`:''}</div>
+   <div class="card"><h3>기본 활동</h3>
+     <p class="small muted" style="margin:0">안 하는 활동은 지워서 목록을 줄일 수 있어요. 지우면 그 활동의 지난 기록도 사라져요.</p>
+     <div class="mlist">${state.acts.filter(a=>!isCustom(a)).map(a=>`<div class="mitem"><div style="min-width:0"><div>${a.grpN?esc(a.grpN)+' · ':''}${esc(a.name)}${a.adv?' <span class="advtag">고급</span>':''}</div>${fxChips(a.fx)}</div><button type="button" class="x" data-del="${a.id}">삭제</button></div>`).join('')}</div></div>
+   ${renderCrit()}
+   <div class="card"><h3>상태 진단</h3>
+     <p class="small muted" style="margin:0">질문에 다시 답해서 세부 능력 15개의 시작 레벨만 새로 정해요. 지금까지의 기록은 그대로 다시 계산돼요.</p>
+     <button type="button" class="btn ghost" id="rediag">진단만 다시 하기</button></div>
+   <div class="card"><h3>HTML 파일로 저장</h3>
+     <p class="small muted" style="margin:0">지금까지의 기록이 들어있는 앱을 HTML 파일 하나로 내려받아요. 그 파일은 브라우저에서 바로 열리고, 여기서 다시 불러와 복원할 수도 있어요.</p>
+     <button type="button" class="btn" id="expHtml">HTML 파일로 저장하기</button>
+     ${impPending?`<div class="meas"><div class="small"><b>${esc(impPending.name||'나')}</b>의 기록 (${impPending.savedAt?fmtDay(impPending.savedAt.slice(0,10))+' 저장':'저장 날짜 없음'})으로 지금 기록을 바꿀까요? 지금 기록은 사라져요.</div>
+       <div class="row"><button type="button" class="btn ghost" id="impNo">취소</button><button type="button" class="btn danger" id="impYes">이 기록으로 바꾸기</button></div></div>`
+       :`<label class="btn ghost filebtn" for="impFile">저장한 파일 불러오기<input id="impFile" type="file" accept=".html,.htm,.json,text/html,application/json"></label>`}
+     <p class="small muted" style="margin:0">${savedLabel()}</p></div>
+   <div class="card"><h3>처음부터</h3>
+     <p class="small muted" style="margin:0">시작 능력치와 모든 기록을 지우고 새로 시작해요.</p>
+     ${confirmReset?`<div class="row"><button type="button" class="btn danger" id="doReset">지우고 다시 진단하기</button><button type="button" class="btn ghost" id="cancelReset">취소</button></div>`
+       :`<button type="button" class="btn ghost" id="askReset">처음부터 다시 하기</button>`}
+     <p class="small muted" style="margin:0">${ref?'기록은 내 계정에 저장돼요.':'기록은 이 기기에만 저장돼요. 앱을 지우면 기록도 사라지니 가끔 HTML 파일로 저장해 두세요.'}</p></div>
+   <p class="small muted" style="margin:0;text-align:center">나 키우기 ${APP_VERSION}</p>
+  </section>`;
+}
+
+/* ---------- 진단: step 0 이름 · 1~5 분야별 자기 평가 · 6 실제 이력 · 7 결과 ---------- */
+const NC=CATS.length, SPEC_STEP=NC+1, RESULT_STEP=NC+2;
+const TOTAL_Q=CATS.reduce((a,c)=>a+QSETS[c.k].length,0)+SPEC.length;
+function newOnboard(keep){return {name:state?state.name:'',ans:Object.fromEntries(CATS.map(c=>[c.k,[]])),spec:[],step:keep?1:0,keep:!!keep}}
+function answered(){return CATS.reduce((a,c)=>a+onboard.ans[c.k].filter(v=>v!=null).length,0)+onboard.spec.filter(v=>v!=null).length}
+function selfScore(){
+  const sum={},cnt={};SUBS.forEach(s=>{sum[s.k]=0;cnt[s.k]=0});
+  CATS.forEach(c=>QSETS[c.k].forEach((q,i)=>{const v=onboard.ans[c.k][i];if(v!=null){sum[q[0]]+=v;cnt[q[0]]++}}));
+  return Object.fromEntries(SUBS.map(s=>[s.k,Math.round(10+(cnt[s.k]?sum[s.k]/cnt[s.k]:1)*20)]));   // 평균 0~3점 → 10~70
+}
+function specBonus(){
+  const b=Object.fromEntries(SUBS.map(s=>[s.k,0]));
+  SPEC.forEach((q,i)=>{const v=onboard.spec[i];if(v!=null)b[q.k]+=q.b[v]});
+  SUBS.forEach(s=>b[s.k]=Math.min(BONUS_CAP,b[s.k]));return b;
+}
+function computeBase(){const a=selfScore(),b=specBonus();return Object.fromEntries(SUBS.map(s=>[s.k,Math.min(BASE_CAP,a[s.k]+b[s.k])]))}
+function stepDone(st){
+  if(st>=1&&st<=NC){const c=CATS[st-1];return QSETS[c.k].every((q,i)=>onboard.ans[c.k][i]!=null)}
+  if(st===SPEC_STEP)return SPEC.every((q,i)=>onboard.spec[i]!=null);
+  return true;
+}
+const optBtns=(opts,sel,q)=>`<div class="opts">${opts.map((o,j)=>`<button type="button" class="opt${sel===j?' on':''}" data-q="${q}" data-o="${j}" aria-pressed="${sel===j}">${o}</button>`).join('')}</div>`;
+const ieyo=w=>{const c=w.charCodeAt(w.length-1)-0xAC00;return c>=0&&c<11172&&c%28?'이에요':'예요'};
+const subTag=k=>`<span class="qtag" style="color:${color(k)}">${SUB[k].n}</span>`;
+function renderOnboard(){
+  if(!onboard)onboard=newOnboard(false);
+  const st=onboard.step;
+  const prog=`<div class="prog"><i id="progBar" style="width:${Math.round(answered()/TOTAL_Q*100)}%"></i></div><div class="small muted">상태 진단 <span class="num" id="progNum">${answered()}/${TOTAL_Q}</span></div>`;
+  const nav=label=>`<div class="row"><button type="button" class="btn ghost" id="obPrev">${st===1&&onboard.keep?'취소':'이전'}</button><button type="button" class="btn" id="obNext" ${stepDone(st)?'':'disabled'}>${label}</button></div>`;
+  if(st===0)return `<section class="panel">
+    <div><h2>나 키우기</h2><p class="intro">${TOTAL_Q}개 질문으로 지금의 나를 진단해서 세부 능력 15개의 시작 레벨을 정해요. 생활 습관에 대한 자기 평가에 학력·실적 같은 실제 이력이 더해져요. 그다음부터는 매일의 컨디션과 한 일, 안 한 일에 따라 능력이 자라거나 줄어들어요.</p></div>
+    <div class="card"><label for="obName">캐릭터 이름<input id="obName" maxlength="20" placeholder="나" value="${esc(onboard.name)}"></label></div>
+    <button type="button" class="btn" id="obNext">진단 시작하기</button></section>`;
+  if(st<=NC){
+    const c=CATS[st-1];const a=onboard.ans[c.k];
+    return `<section class="panel">${prog}
+      <div class="qhead"><span class="dot" style="background:var(--c-${c.k})"></span><h2>${c.n}</h2><span class="small muted num">${st} / ${NC+1}</span></div>
+      ${QSETS[c.k].map((q,i)=>`<div class="card q"><div class="qt">${subTag(q[0])}${q[1]}</div>${optBtns(q[2],a[i],i)}</div>`).join('')}
+      ${nav('다음')}</section>`;
+  }
+  if(st===SPEC_STEP){
+    let h=`<section class="panel">${prog}
+      <div class="qhead"><span class="dot" style="background:var(--accent)"></span><h2>실제 이력</h2><span class="small muted num">${NC+1} / ${NC+1}</span></div>
+      <div class="note">지금까지 쌓아온 기록과 경험이에요. 자기 평가 점수에 보너스로 더해져요 (세부 능력마다 최대 +${BONUS_CAP}). 해당 없으면 첫 번째 보기를 고르세요.</div>`;
+    CATS.forEach(c=>{const qs=SPEC.map((q,i)=>[q,i]).filter(([q])=>SUB[q.k].cat===c.k);if(!qs.length)return;
+      h+=`<div class="sec-label" style="color:var(--c-${c.k})">${c.n}</div>`+qs.map(([q,i])=>`<div class="card q"><div class="qt">${subTag(q.k)}${q.t}</div>${optBtns(q.o,onboard.spec[i],i)}</div>`).join('')});
+    return h+nav('결과 보기')+'</section>';
+  }
+  const base=computeBase(),self=selfScore(),bonus=specBonus();
+  const cl=Object.fromEntries(CATS.map(c=>[c.k,catLv(base,c)]));
+  const sorted=SUBS.slice().sort((x,y)=>base[y.k]-base[x.k]);
+  const strong=sorted[0],weak=sorted[sorted.length-1];
+  const avg=avgOf(cl);
+  return `<section class="panel">${prog}
+    <div><h2>진단 결과</h2><p class="intro">지금의 ${esc(onboard.name.trim()||'나')}는 평균 <b class="num">Lv ${avg}</b>, ‘${titleOf(avg)}’ 단계예요. 가장 강한 능력은 <b style="color:${color(strong.k)}">${strong.n}</b>, 가장 키울 여지가 큰 능력은 <b style="color:${color(weak.k)}">${weak.n}</b>${ieyo(weak.n)}.</p></div>
+    <div class="radar">${radar(cl)}</div>
+    <div class="card"><div class="brk head"><span></span><span>자기 평가</span><span>이력</span><span>시작</span></div>
+      ${CATS.map(c=>`<div class="brk cat"><span style="color:var(--c-${c.k})">${c.n}</span><span></span><span></span><span class="num">${cl[c.k]}</span></div>`+
+        c.subs.map(([k])=>`<div class="brk"><span>${SUB[k].n}</span><span class="num">${self[k]}</span><span class="num ${bonus[k]?'pos':'zero'}">+${bonus[k]}</span><span class="num"><b>${base[k]}</b></span></div>`).join('')).join('')}</div>
+    ${onboard.keep?'<div class="note">지금까지의 기록은 새 시작 능력치 위에서 다시 계산돼요.</div>':''}
+    <div class="row"><button type="button" class="btn ghost" id="obPrev">다시 답하기</button><button type="button" class="btn" id="startBtn">${onboard.keep?'이 능력치로 바꾸기':'이 능력치로 시작하기'}</button></div>
+  </section>`;
+}
+function bindOnboard(){
+  const n=$('#obName');if(n)n.addEventListener('input',()=>onboard.name=n.value);
+  const st=onboard.step;
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    const q=+b.dataset.q,o=+b.dataset.o;
+    if(st===SPEC_STEP)onboard.spec[q]=o;else onboard.ans[CATS[st-1].k][q]=o;
+    b.parentNode.querySelectorAll('.opt').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});
+    const nx=$('#obNext');if(nx)nx.disabled=!stepDone(st);
+    $('#progBar').style.width=Math.round(answered()/TOTAL_Q*100)+'%';$('#progNum').textContent=answered()+'/'+TOTAL_Q;
+  });
+  const nx=$('#obNext');if(nx)nx.onclick=()=>{if(!stepDone(st))return;onboard.step++;render();window.scrollTo(0,0)};
+  const pv=$('#obPrev');if(pv)pv.onclick=()=>{
+    if(st===1&&onboard.keep){onboard=null;render();return}
+    onboard.step=st===RESULT_STEP?1:st-1;render();window.scrollTo(0,0)};
+  const s=$('#startBtn');if(s)s.onclick=()=>{
+    if(onboard.keep&&state){state.base=computeBase();state.diagnosedAt=todayStr()}
+    else state={v:4,name:onboard.name.trim()||'나',base:computeBase(),startDate:todayStr(),diagnosedAt:todayStr(),acts:JSON.parse(JSON.stringify(DEFAULT_ACTS)),knownDefaults:DEFAULT_ACTS.map(a=>a.id),logs:{},cond:{},studies:[],slogs:{},tests:[],crit:{},quests:{d:{},w:{}},seen:{ach:[],pl:1}};
+    onboard=null;tab='today';viewDay=todayStr();save();render();window.scrollTo(0,0);
+  };
+}
+
+/* ---------- HTML 파일로 저장 · 불러오기 ---------- */
+let impPending=null;
+function savedLabel(){return state&&state.savedAt?`마지막 자동 저장 ${fmtDay(state.savedAt.slice(0,10))} ${state.savedAt.slice(11,16)} (UTC) · ${ref?'내 계정':'이 기기'}`:''}
+function buildHTML(){
+  // 이 앱의 화면 구조·스타일·코드에 지금 기록을 넣어 혼자 열리는 파일을 만듦
+  const style=document.getElementById('app-css').outerHTML;
+  const code=document.getElementById('app-js').textContent;
+  const data=JSON.stringify(state).replace(/</g,'\\u003c');
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    +'<title>나 키우기</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">'
+    +style+'<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:15px}[hidden]{display:none!important}</style></head><body>'
+    +'<div class="wrap" id="app"></div>'
+    +'<nav class="tabs" id="tabs" hidden><div class="in"><button id="tab-today" data-tab="today">오늘</button><button id="tab-quest" data-tab="quest">도전</button><button id="tab-stats" data-tab="stats">능력치</button><button id="tab-hist" data-tab="hist">기록</button><button id="tab-set" data-tab="set">설정</button></div></nav>'
+    +'<div class="toast" id="toast" hidden></div>'
+    +'<script type="application/json" id="savedata">'+data+'</'+'script>'
+    +'<script id="app-js">'+code+'</'+'script></body></html>';
+}
+async function exportHTML(){
+  if(!state.savedAt)state.savedAt=new Date().toISOString();
+  const name=(state.name||'나').replace(/[\\/:*?"<>|]/g,'').trim()||'나';
+  const filename=`나키우기-${name}-${todayStr()}.html`;
+  const html=buildHTML();
+  let dl=null;try{dl=window.claude?await window.claude.use('downloads'):null}catch(e){}
+  if(dl){
+    try{await dl.save({filename,data:new Blob([html],{type:'text/html'})});showToast('HTML 파일로 저장했어요.')}
+    catch(e){if(e&&e.code==='declined')showToast('저장을 취소했어요.');else if(e&&e.code==='rate_limited')showToast('이미 저장 창이 열려 있어요. 잠시 후 다시 눌러 주세요.');else showToast('여기서는 파일을 저장할 수 없어요. 브라우저에서 앱을 열어 다시 시도해 주세요.')}
+    return;
+  }
+  // 따로 저장한 파일을 브라우저에서 열었을 때
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=filename;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);showToast('HTML 파일로 저장했어요.')}
+  catch(e){showToast('여기서는 파일을 저장할 수 없어요.')}
+}
+function readSaved(text){
+  try{const j=JSON.parse(text);if(validShape(j))return j}catch(e){}
+  try{const doc=new DOMParser().parseFromString(text,'text/html');const el=doc.getElementById('savedata');if(el){const j=JSON.parse(el.textContent);if(validShape(j))return j}}catch(e){}
+  return null;
+}
+function bindBackup(){
+  const ex=$('#expHtml');if(ex)ex.onclick=()=>exportHTML();
+  const f=$('#impFile');if(f)f.addEventListener('change',()=>{const file=f.files&&f.files[0];if(!file)return;
+    const r=new FileReader();r.onload=()=>{const j=readSaved(String(r.result));
+      if(!j){showToast('나 키우기에서 저장한 파일이 아니에요.');f.value='';return}
+      impPending=j;keepScroll(render)};r.readAsText(file)});
+  const n=$('#impNo');if(n)n.onclick=()=>{impPending=null;keepScroll(render)};
+  const y=$('#impYes');if(y)y.onclick=()=>{adopt(JSON.parse(JSON.stringify(impPending)));impPending=null;viewDay=todayStr();save();keepScroll(render);showToast('저장한 파일의 기록으로 바꿨어요.')};
+}
+
+/* ---------- 이벤트 ---------- */
+function bind(){
+  document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>commit(()=>{
+    const id=b.dataset.act,log=state.logs[viewDay]||[];
+    const a=state.acts.find(x=>x.id===id);
+    state.logs[viewDay]=log.includes(id)?log.filter(x=>x!==id):[...log.filter(x=>!a||!a.grp||(state.acts.find(y=>y.id===x)||{}).grp!==a.grp),id];
+    if(!state.logs[viewDay].length)delete state.logs[viewDay];
+  }));
+  document.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>commit(()=>{
+    const c=Object.assign({},state.cond[viewDay]);const k=b.dataset.ck,v=+b.dataset.cv;
+    if(c[k]===v)delete c[k];else c[k]=v;
+    if(Object.keys(c).length)state.cond[viewDay]=c;else delete state.cond[viewDay];
+  }));
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{const k=b.dataset.cat;openCats.has(k)?openCats.delete(k):openCats.add(k);const y=window.scrollY;render();window.scrollTo(0,y)});
+  const p=$('#prevDay'),nx=$('#nextDay');
+  if(p)p.onclick=()=>{viewDay=addDays(viewDay,-1);render()};
+  if(nx)nx.onclick=()=>{viewDay=addDays(viewDay,1);render()};
+  const ni=$('#nameIn');if(ni)ni.addEventListener('change',()=>{state.name=ni.value.trim()||'나';save();render()});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.del;state.acts=state.acts.filter(a=>a.id!==id);
+    for(const d in state.logs){state.logs[d]=state.logs[d].filter(x=>x!==id);if(!state.logs[d].length)delete state.logs[d]}
+    const y=window.scrollY;save();render();window.scrollTo(0,y)});
+  const add=$('#addAct');if(add)add.onclick=()=>{
+    const name=$('#newName').value.trim();const kind=CUSTOM_KINDS.find(k=>k[0]===$('#newKind').value);const xp=kind[2];
+    if(!name){showToast('활동 이름을 적어 주세요.');return}
+    if(xp>0&&customPos().length>=slots(curP)){showToast(slots(curP)?`나만의 활동 칸이 가득 찼어요. 나 Lv ${[3,12,20][slots(curP)]||'-'}에 한 칸 더 열려요.`:'나만의 활동은 나 Lv 3에 열려요. 해버린 일은 지금도 추가할 수 있어요.');return}
+    state.acts.push({id:'c'+Date.now().toString(36),name,fx:{[$('#newStat').value]:xp},bad:xp<0});
+    save();keepScroll(render);showToast('활동을 추가했어요.')};
+  const ar=$('#askReset');if(ar)ar.onclick=()=>{confirmReset=true;render()};
+  const cr=$('#cancelReset');if(cr)cr.onclick=()=>{confirmReset=false;render()};
+  const dr=$('#doReset');if(dr)dr.onclick=()=>{confirmReset=false;onboard=newOnboard(false);state=null;lsSet(null);
+    if(ref)ref.set({v:4,reset:true}).catch(()=>{});render();window.scrollTo(0,0)};
+  const rd=$('#rediag');if(rd)rd.onclick=()=>{onboard=newOnboard(true);render();window.scrollTo(0,0)};
+  bindStudy();bindBackup();bindProgress();
+}
+function bindProgress(){
+  document.querySelectorAll('[data-gotab]').forEach(b=>b.onclick=()=>{tab=b.dataset.gotab;render();window.scrollTo(0,0)});
+  document.querySelectorAll('[data-title]').forEach(b=>b.onclick=()=>showTitlePicker(curP));
+  document.querySelectorAll('[data-ach]').forEach(b=>b.onclick=()=>showAchInfo(ACH.find(a=>a.id===b.dataset.ach),curP));
+  document.querySelectorAll('[data-reroll]').forEach(b=>b.onclick=()=>{
+    const t=todayStr(),q=state.quests.d[t];if(!q)return;const i=+b.dataset.reroll;const n=q.rr===true?1:(q.rr||0);
+    if(n>0&&seedsOf(curP)<REROLL_COST){showToast(`씨앗이 ${REROLL_COST}개 필요해요.`);return}
+    const R=replay(state);const nw=pickDaily(t,R.cur,q.ids,1,'rr'+i+'-'+n)[0];if(!nw){showToast('바꿀 수 있는 퀘스트가 없어요.');return}
+    if(n>0)buy({id:'reroll',cost:REROLL_COST});
+    const ids=q.ids.slice();ids[i]=nw;state.quests.d[t]={ids,rr:n+1};save();keepScroll(render);showToast(n>0?`씨앗 ${REROLL_COST}개로 퀘스트를 바꿨어요.`:'퀘스트를 바꿨어요.')});
+  document.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{state.skin=b.dataset.skin;save();keepScroll(render)});
+  document.querySelectorAll('[data-pot]').forEach(b=>b.onclick=()=>{state.pot=b.dataset.pot;save();keepScroll(render)});
+  bindGarden();
+}
+function keepScroll(fn){const y=window.scrollY;fn();window.scrollTo(0,y)}
+function bindStudy(){
+  document.querySelectorAll('[data-sid]').forEach(b=>b.onclick=()=>commit(()=>{
+    const id=b.dataset.sid,k=b.dataset.sa;const day=Object.assign({},state.slogs[viewDay]);const l=day[id]||[];
+    const s=state.studies.find(z=>z.id===id),isT=(sAct(s,k)||[])[3]==='time';
+    day[id]=l.includes(k)?l.filter(x=>x!==k):[...l.filter(x=>!isT||(sAct(s,x)||[])[3]!=='time'),k];if(!day[id].length)delete day[id];
+    if(Object.keys(day).length)state.slogs[viewDay]=day;else delete state.slogs[viewDay];
+  }));
+  document.querySelectorAll('[data-addstudy]').forEach(b=>b.onclick=()=>{sform=newSForm();tab='stats';render();const f=$('#sform');if(f)f.scrollIntoView({block:'start'})});
+  if(sform&&$('#sform')){
+    $('#sfName').addEventListener('input',e=>{sform.name=e.target.value;$('#sfAdd').disabled=!sformDone()});
+    $('#sfGoal').addEventListener('input',e=>sform.goal=e.target.value);
+    $('#sfDate').addEventListener('change',e=>sform.date=e.target.value);
+    document.querySelectorAll('[data-stype]').forEach(b=>b.onclick=()=>{sform.type=b.dataset.stype;sform.ans=[];keepScroll(render)});
+    document.querySelectorAll('[data-sq]').forEach(b=>b.onclick=()=>{
+      sform.ans[+b.dataset.sq]=+b.dataset.o;
+      b.parentNode.querySelectorAll('.opt').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});
+      const t=STYPES[sform.type],pv=$('#sfPreview'),acts=pv.dataset.acts;
+      pv.innerHTML=(t.qs.every((q,i)=>sform.ans[i]!=null)?`시작 레벨 <b class="num">Lv ${sformBase()}</b>. `:'질문에 답하면 시작 레벨이 정해져요. ')+esc(acts);
+      $('#sfAdd').disabled=!sformDone();
+    });
+    $('#sfCancel').onclick=()=>{sform=null;keepScroll(render)};
+    $('#sfAdd').onclick=()=>{
+      if(!sformDone())return;
+      const s={id:'s'+Date.now().toString(36),name:sform.name.trim(),type:sform.type,goal:sform.goal.trim(),date:sform.date||'',base:sformBase(),start:todayStr(),pauses:[],archived:false};
+      state.studies.push(s);sform=null;save();keepScroll(render);showToast(`${s.name} 공부를 Lv ${s.base}에서 시작해요.`);
+    };
+  }
+  document.querySelectorAll('[data-sarch]').forEach(b=>b.onclick=()=>{const s=state.studies.find(z=>z.id===b.dataset.sarch);s.archived=true;s.pauses=[...(s.pauses||[]),[todayStr(),null]];save();keepScroll(render)});
+  document.querySelectorAll('[data-srest]').forEach(b=>b.onclick=()=>{const s=state.studies.find(z=>z.id===b.dataset.srest);s.archived=false;const p=s.pauses[s.pauses.length-1];if(p&&p[1]==null)p[1]=todayStr();save();keepScroll(render)});
+  document.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{confirmDel=b.dataset.sdel;keepScroll(render)});
+  document.querySelectorAll('[data-sdelno]').forEach(b=>b.onclick=()=>{confirmDel=null;keepScroll(render)});
+  document.querySelectorAll('[data-sdelok]').forEach(b=>b.onclick=()=>{const id=b.dataset.sdelok;
+    state.studies=state.studies.filter(s=>s.id!==id);
+    for(const d in state.slogs){delete state.slogs[d][id];if(!Object.keys(state.slogs[d]).length)delete state.slogs[d]}
+    confirmDel=null;save();keepScroll(render)});
+  document.querySelectorAll('[data-gostats]').forEach(b=>b.onclick=()=>{tab='stats';const R=replay(state);SUBS.forEach(s=>{if(R.cur[s.k].wait)openCats.add(s.cat)});render();window.scrollTo(0,0)});
+  document.querySelectorAll('[data-meas]').forEach(b=>b.onclick=()=>{measOpen=measOpen===b.dataset.meas?null:b.dataset.meas;keepScroll(render);const i=$('#measIn');if(i)i.focus({preventScroll:true})});
+  const mc=$('#measCancel');if(mc)mc.onclick=()=>{measOpen=null;keepScroll(render)};
+  const ms=$('#measSave');if(ms)ms.onclick=()=>{
+    const k=ms.dataset.k,raw=$('#measIn').value.trim(),v=Number(raw);
+    if(raw===''||!isFinite(v)||v<0){showToast('측정값을 숫자로 적어 주세요.');return}
+    const B=replay(state);const c=SUB[k]?B.cur[k]:B.scur[k];const G=nextGate(c);const cr=critOf(k);
+    const name=SUB[k]?SUB[k].n:(state.studies.find(z=>z.id===k)||{}).name;
+    state.tests=[...(state.tests||[]),{k,date:todayStr(),v,gates:gatesFor(k,v)}];measOpen=null;
+    const A=replay(state);const a=SUB[k]?A.cur[k]:A.scur[k];
+    save();keepScroll(render);
+    if(a.lvl>c.lvl)showToast(`<b>승급!</b> ${esc(name)} Lv ${a.lvl}`,true);
+    else if(v>=cr.t[G/10-1])showToast(`Lv ${G} 승급 시험 통과! 경험치가 차면 바로 올라가요.`);
+    else showToast(`기록했어요. Lv ${G}까지 ${+(cr.t[G/10-1]-v).toFixed(2)}${cr.u} 더 필요해요.`);
+  };
+  document.querySelectorAll('[data-crit]').forEach(i=>i.addEventListener('change',()=>{
+    const k=i.dataset.crit,nums=i.value.split(/[,\s]+/).filter(Boolean).map(Number);
+    if(nums.length!==10||nums.some(n=>!isFinite(n)||n<0)){showToast('숫자 10개를 쉼표로 나눠 적어 주세요.');i.value=critOf(k).t.join(', ');return}
+    state.crit=Object.assign({},state.crit,{[k]:nums});save();showToast('승급 기준을 바꿨어요.')}));
+  const cr0=$('#critReset');if(cr0)cr0.onclick=()=>{state.crit={};save();keepScroll(render);showToast('승급 기준을 기본값으로 되돌렸어요.')};
+}
+function commit(mutate){
+  const B=replay(state),before=B.cur;
+  mutate();
+  const A=replay(state),after=A.cur;
+  const ups=[],downs=[];
+  state.studies.forEach(s=>{const b=B.scur[s.id],a=A.scur[s.id];if(!a||!b)return;if(a.lvl>b.lvl)ups.push(`${s.name} Lv ${a.lvl}`);if(a.lvl<b.lvl)downs.push(`${s.name} Lv ${a.lvl}`)});
+  SUBS.forEach(s=>{const d=after[s.k].lvl-before[s.k].lvl;if(d>0)ups.push(`${s.n} Lv ${after[s.k].lvl}`);if(d<0)downs.push(`${s.n} Lv ${after[s.k].lvl}`)});
+  const y=window.scrollY;save();render();window.scrollTo(0,y);
+  if(ups.length)showToast(`<b>레벨 업!</b> ${ups.join(', ')}`,true);
+  else if(downs.length)showToast(`<b>레벨 다운</b> ${downs.join(', ')}`,true);
+}
+let toastT;
+function showToast(msg,html){const t=$('#toast');if(html)t.innerHTML=msg;else t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2400)}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{if(b.dataset.tab!==tab)qsub='quest';tab=b.dataset.tab;if(celebOpen&&!celebQ.length)closeModal();confirmReset=false;impPending=null;sform=null;confirmDel=null;measOpen=null;if(tab==='today')viewDay=todayStr();render();window.scrollTo(0,0)});
+
+/* ---------- 시작 ---------- */
+const RESET_ID='2026-10-14-reset1';   // 이 표시가 없는 예전 저장은 무시함 (초기화)
+const APP_VERSION='0.12 베타 (10월 15일)';
+const validShape=s=>!!(s&&s.base&&s.startDate&&Array.isArray(s.acts)&&s.logs);
+const valid=s=>validShape(s)&&s.resetId===RESET_ID;
+function adopt(s){const m=migrate(s);refreshActs(m);if(!m.quests)m.quests={d:{},w:{}};if(!m.cond)m.cond={};if(!m.studies)m.studies=[];if(!m.slogs)m.slogs={};if(!m.tests)m.tests=[];if(!m.crit)m.crit={};const changed=m!==s;state=m;return changed}
+(async()=>{
+  const local=lsGet();
+  let embedded=null;try{const el=document.getElementById('savedata');if(el)embedded=JSON.parse(el.textContent)}catch(e){}
+  const newer=(a,b)=>!valid(a)?b:!valid(b)?a:((b.savedAt||'')>(a.savedAt||'')?b:a);
+  const first=newer(local,embedded);
+  if(valid(first)){adopt(first);lsSet(state)}
+  render();   // 저장소 연결을 기다리지 않고 바로 화면을 띄움
+  try{
+    db=window.claude?await window.claude.use('db'):null;
+    const user=db&&window.claude?await window.claude.use('user'):null;
+    const uid=user?await user.id():null;
+    if(db&&uid){
+      ref=db.doc(`data/users/${uid}/game`);
+      const snap=await ref.get();
+      const remote=snap.exists?snap.data():null;
+      const busy=onboard&&(onboard.step>0||onboard.keep);
+      const remoteNewer=valid(remote)&&(!valid(state)||(remote.savedAt||'')>=(state.savedAt||''));
+      if(remoteNewer&&!busy){const changed=adopt(remote);onboard=null;lsSet(state);render();if(changed)flush()}
+      else if(valid(state)){flush()}
+      if(tab==='set'&&!onboard)render();
+    }
+  }catch(e){ref=null}
+})();
+window.__raiseMe={replay:()=>state&&replay(state),migrate};
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script>
+</body>
+</html>
